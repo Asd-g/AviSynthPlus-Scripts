@@ -1,4 +1,5 @@
 ## Changelog:
+# - fixed error when cTop/cBottom/cLeft/cRight=1.
 # - merged all calculations in one expression that leads to ~15-20% less memory usage, ~10% speedup with 16-bit clips.
 # - added array support for parameters.
 # - replaced ResampleMT with z_ resizers.
@@ -113,11 +114,13 @@ Function BalanceBorders(clip c, val "cTop", val "cBottom", val "cLeft", val "cRi
                 Assert((i == 0 ? ctop_ * 4 : BitRShiftL(ctop_ * 4, chrh)) < Height() && (i == 0 ? cbottom_ * 4 : BitRShiftL(cbottom_, chrh)) < Height(), "BalanceBorders: cTop*4, cBottom*4 has to be < height.")
                 Assert(blur_ > 0, "BalanceBorders: Blur parameter must be > 0")
                 Assert(thresh_ > 0 && thresh_ <= 128, "BalanceBorders: Thresh parameter must be > 0 and <= 128")
-            
-                ctop_ > 0 ? StackVertical(Crop(0, 0, 0, i == 0 ? ctop_ * 2 : BitRShiftL(ctop_ * 2, chrh)).BalanceTopBorder(i == 0 ? ctop_ : BitRShiftL(ctop_, chrh), thresh_, blur_, i, clip_444), Crop(0, i == 0 ? ctop_ * 2 : BitRShiftL(ctop_ * 2, chrh), 0, 0)).TurnRight() : last.TurnRight()
-                cleft_ > 0 ? StackVertical(Crop(0, 0, 0, i == 0 ? cleft_ * 2 : BitRShiftL(cleft_ * 2, chrw)).BalanceTopBorder(i == 0 ? cleft_ : BitRShiftL(cleft_, chrw), thresh_, blur_, i, clip_444), Crop(0, i == 0 ? cleft_ * 2 : BitRShiftL(cleft_ * 2, chrw), 0, 0)).TurnRight() : last.TurnRight()
-                cbottom_ > 0 ? StackVertical(Crop(0, 0, 0, i == 0 ? cbottom_ * 2 : BitRShiftL(cbottom_ * 2, chrh)).BalanceTopBorder(i == 0 ? cbottom_ : BitRShiftL(cbottom_, chrh), thresh_, blur_, i, clip_444), Crop(0, i == 0 ? cbottom_ * 2 : BitRShiftL(cbottom_ * 2, chrh), 0, 0)).TurnRight() : last.TurnRight()
-                cright_ > 0 ? StackVertical(Crop(0, 0, 0, i == 0 ? cright_ * 2 : BitRShiftL(cright_ * 2, chrw)).BalanceTopBorder(i == 0 ? cright_ : BitRShiftL(cright_, chrw), thresh_, blur_, i, clip_444), Crop(0, i == 0 ? cright_ * 2 : BitRShiftL(cright_ * 2, chrw), 0, 0)).TurnRight() : last.TurnRight()
+                
+                param_scale = i == 0 ? 0 : 1
+                
+                ctop_ > param_scale ? StackVertical(Crop(0, 0, 0, i == 0 ? ctop_ * 2 : BitRShiftL(ctop_ * 2, chrh)).BalanceTopBorder(i == 0 ? ctop_ : BitRShiftL(ctop_, chrh), thresh_, blur_, i, clip_444), Crop(0, i == 0 ? ctop_ * 2 : BitRShiftL(ctop_ * 2, chrh), 0, 0)).TurnRight() : last.TurnRight()
+                cleft_ > param_scale ? StackVertical(Crop(0, 0, 0, i == 0 ? cleft_ * 2 : BitRShiftL(cleft_ * 2, chrw)).BalanceTopBorder(i == 0 ? cleft_ : BitRShiftL(cleft_, chrw), thresh_, blur_, i, clip_444), Crop(0, i == 0 ? cleft_ * 2 : BitRShiftL(cleft_ * 2, chrw), 0, 0)).TurnRight() : last.TurnRight()
+                cbottom_ > param_scale ? StackVertical(Crop(0, 0, 0, i == 0 ? cbottom_ * 2 : BitRShiftL(cbottom_ * 2, chrh)).BalanceTopBorder(i == 0 ? cbottom_ : BitRShiftL(cbottom_, chrh), thresh_, blur_, i, clip_444), Crop(0, i == 0 ? cbottom_ * 2 : BitRShiftL(cbottom_ * 2, chrh), 0, 0)).TurnRight() : last.TurnRight()
+                cright_ > param_scale ? StackVertical(Crop(0, 0, 0, i == 0 ? cright_ * 2 : BitRShiftL(cright_ * 2, chrw)).BalanceTopBorder(i == 0 ? cright_ : BitRShiftL(cright_, chrw), thresh_, blur_, i, clip_444), Crop(0, i == 0 ? cright_ * 2 : BitRShiftL(cright_ * 2, chrw), 0, 0)).TurnRight() : last.TurnRight()
                 
                 if (i == 0)
                 {
@@ -203,10 +206,10 @@ Function BalanceBorders(clip c, val "cTop", val "cBottom", val "cLeft", val "cRi
             Assert(BitRShiftL(cLeft * 4, chrw) < Width() && BitRShiftL(cRight * 4, chrw) < Width(), "BalanceBorders: cLeft*4, cRight*4 has to be < width.")
             Assert(BitRShiftL(cTop * 4, chrh) < Height() && BitRShiftL(cBottom, chrh) < Height(), "BalanceBorders: cTop*4, cBottom*4 has to be < height.")
             
-            cTop > 0 ? StackVertical(Crop(0, 0, 0, BitRShiftL(cTop * 2, chrh)).BalanceTopBorder(BitRShiftL(cTop, chrh), thresh, blur, 1, clip_444), Crop(0, BitRShiftL(cTop * 2, chrh), 0, 0)).TurnRight() : last.TurnRight()
-            cLeft > 0 ? StackVertical(Crop(0, 0, 0, BitRShiftL(cLeft * 2, chrw)).BalanceTopBorder(BitRShiftL(cLeft, chrw), thresh, blur, 1, clip_444), Crop(0, BitRShiftL(cLeft * 2, chrw), 0, 0)).TurnRight() : last.TurnRight()
-            cBottom > 0 ? StackVertical(Crop(0, 0, 0, BitRShiftL(cBottom * 2, chrh)).BalanceTopBorder(BitRShiftL(cBottom, chrh), thresh, blur, 1, clip_444), Crop(0, BitRShiftL(cBottom * 2, chrh), 0, 0)).TurnRight() : last.TurnRight()
-            cRight > 0 ? StackVertical(Crop(0, 0, 0, BitRShiftL(cRight * 2, chrw)).BalanceTopBorder(BitRShiftL(cRight, chrw), thresh, blur, 1, clip_444), Crop(0, BitRShiftL(cRight * 2, chrw), 0, 0)).TurnRight() : last.TurnRight()
+            cTop > 1 ? StackVertical(Crop(0, 0, 0, BitRShiftL(cTop * 2, chrh)).BalanceTopBorder(BitRShiftL(cTop, chrh), thresh, blur, 1, clip_444), Crop(0, BitRShiftL(cTop * 2, chrh), 0, 0)).TurnRight() : last.TurnRight()
+            cLeft > 1 ? StackVertical(Crop(0, 0, 0, BitRShiftL(cLeft * 2, chrw)).BalanceTopBorder(BitRShiftL(cLeft, chrw), thresh, blur, 1, clip_444), Crop(0, BitRShiftL(cLeft * 2, chrw), 0, 0)).TurnRight() : last.TurnRight()
+            cBottom > 1 ? StackVertical(Crop(0, 0, 0, BitRShiftL(cBottom * 2, chrh)).BalanceTopBorder(BitRShiftL(cBottom, chrh), thresh, blur, 1, clip_444), Crop(0, BitRShiftL(cBottom * 2, chrh), 0, 0)).TurnRight() : last.TurnRight()
+            cRight > 1 ? StackVertical(Crop(0, 0, 0, BitRShiftL(cRight * 2, chrw)).BalanceTopBorder(BitRShiftL(cRight, chrw), thresh, blur, 1, clip_444), Crop(0, BitRShiftL(cRight * 2, chrw), 0, 0)).TurnRight() : last.TurnRight()
             
             if (planecount == 0)
             {
@@ -231,10 +234,10 @@ Function BalanceBorders(clip c, val "cTop", val "cBottom", val "cLeft", val "cRi
             Assert(BitRShiftL(cLeft * 4, chrw) < Width() && BitRShiftL(cRight * 4, chrw) < Width(), "BalanceBorders: cLeft*4, cRight*4 has to be < width.")
             Assert(BitRShiftL(cTop * 4, chrh) < Height() && BitRShiftL(cBottom, chrh) < Height(), "BalanceBorders: cTop*4, cBottom*4 has to be < height.")
             
-            cTop > 0 ? StackVertical(Crop(0, 0, 0, BitRShiftL(cTop * 2, chrh)).BalanceTopBorder(BitRShiftL(cTop, chrh), thresh, blur, 1, clip_444), Crop(0, BitRShiftL(cTop * 2, chrh), 0, 0)).TurnRight() : last.TurnRight()
-            cLeft > 0 ? StackVertical(Crop(0, 0, 0, BitRShiftL(cLeft * 2, chrw)).BalanceTopBorder(BitRShiftL(cLeft, chrw), thresh, blur, 1, clip_444), Crop(0, BitRShiftL(cLeft * 2, chrw), 0, 0)).TurnRight() : last.TurnRight()
-            cBottom > 0 ? StackVertical(Crop(0, 0, 0, BitRShiftL(cBottom * 2, chrh)).BalanceTopBorder(BitRShiftL(cBottom, chrh), thresh, blur, 1, clip_444), Crop(0, BitRShiftL(cBottom * 2, chrh), 0, 0)).TurnRight() : last.TurnRight()
-            cRight > 0 ? StackVertical(Crop(0, 0, 0, BitRShiftL(cRight * 2, chrw)).BalanceTopBorder(BitRShiftL(cRight, chrw), thresh, blur, 1, clip_444), Crop(0, BitRShiftL(cRight * 2, chrw), 0, 0)).TurnRight() : last.TurnRight()
+            cTop > 1 ? StackVertical(Crop(0, 0, 0, BitRShiftL(cTop * 2, chrh)).BalanceTopBorder(BitRShiftL(cTop, chrh), thresh, blur, 1, clip_444), Crop(0, BitRShiftL(cTop * 2, chrh), 0, 0)).TurnRight() : last.TurnRight()
+            cLeft > 1 ? StackVertical(Crop(0, 0, 0, BitRShiftL(cLeft * 2, chrw)).BalanceTopBorder(BitRShiftL(cLeft, chrw), thresh, blur, 1, clip_444), Crop(0, BitRShiftL(cLeft * 2, chrw), 0, 0)).TurnRight() : last.TurnRight()
+            cBottom > 1 ? StackVertical(Crop(0, 0, 0, BitRShiftL(cBottom * 2, chrh)).BalanceTopBorder(BitRShiftL(cBottom, chrh), thresh, blur, 1, clip_444), Crop(0, BitRShiftL(cBottom * 2, chrh), 0, 0)).TurnRight() : last.TurnRight()
+            cRight > 1 ? StackVertical(Crop(0, 0, 0, BitRShiftL(cRight * 2, chrw)).BalanceTopBorder(BitRShiftL(cRight, chrw), thresh, blur, 1, clip_444), Crop(0, BitRShiftL(cRight * 2, chrw), 0, 0)).TurnRight() : last.TurnRight()
             
             if (planecount == 0)
             {
