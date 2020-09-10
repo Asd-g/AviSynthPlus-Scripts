@@ -61,11 +61,15 @@ Function bbmod(clip c, val "cTop", val "cBottom", val "cLeft", val "cRight", val
                 Assert(thresh_ > 0 && thresh_ <= 128, "bbmod: Thresh parameter must be > 0 and <= 128")
                 
                 param_scale = i == 0 ? 0 : 1
+                ctop_crop = i == 0 ? ctop_ * 2 : BitRShiftL(ctop_ * 2, chrh)
+                cleft_crop = i == 0 ? cleft_ * 2 : BitRShiftL(cleft_ * 2, chrw)
+                cbottom_crop = i == 0 ? cbottom_ * 2 : BitRShiftL(cbottom_ * 2, chrh)
+                cright_crop = i == 0 ? cright_ * 2 : BitRShiftL(cright_ * 2, chrw)
                 
-                ctop_ > param_scale ? StackVertical(Crop(0, 0, 0, i == 0 ? ctop_ * 2 : BitRShiftL(ctop_ * 2, chrh)).btb(i == 0 ? ctop_ : BitRShiftL(ctop_, chrh), thresh_, blur_, i, clip_444), Crop(0, i == 0 ? ctop_ * 2 : BitRShiftL(ctop_ * 2, chrh), 0, 0)).TurnRight() : last.TurnRight()
-                cleft_ > param_scale ? StackVertical(Crop(0, 0, 0, i == 0 ? cleft_ * 2 : BitRShiftL(cleft_ * 2, chrw)).btb(i == 0 ? cleft_ : BitRShiftL(cleft_, chrw), thresh_, blur_, i, clip_444), Crop(0, i == 0 ? cleft_ * 2 : BitRShiftL(cleft_ * 2, chrw), 0, 0)).TurnRight() : last.TurnRight()
-                cbottom_ > param_scale ? StackVertical(Crop(0, 0, 0, i == 0 ? cbottom_ * 2 : BitRShiftL(cbottom_ * 2, chrh)).btb(i == 0 ? cbottom_ : BitRShiftL(cbottom_, chrh), thresh_, blur_, i, clip_444), Crop(0, i == 0 ? cbottom_ * 2 : BitRShiftL(cbottom_ * 2, chrh), 0, 0)).TurnRight() : last.TurnRight()
-                cright_ > param_scale ? StackVertical(Crop(0, 0, 0, i == 0 ? cright_ * 2 : BitRShiftL(cright_ * 2, chrw)).btb(i == 0 ? cright_ : BitRShiftL(cright_, chrw), thresh_, blur_, i, clip_444), Crop(0, i == 0 ? cright_ * 2 : BitRShiftL(cright_ * 2, chrw), 0, 0)).TurnRight() : last.TurnRight()
+                ctop_ > param_scale ? StackVertical(Crop(0, 0, 0, ctop_crop).btb(i == 0 ? ctop_ : BitRShiftL(ctop_, chrh), thresh_, blur_, i, clip_444), Crop(0, ctop_crop, 0, 0)).TurnRight() : last.TurnRight()
+                cleft_ > param_scale ? StackVertical(Crop(0, 0, 0, cleft_crop).btb(i == 0 ? cleft_ : BitRShiftL(cleft_, chrw), thresh_, blur_, i, clip_444), Crop(0, cleft_crop, 0, 0)).TurnRight() : last.TurnRight()
+                cbottom_ > param_scale ? StackVertical(Crop(0, 0, 0, cbottom_crop).btb(i == 0 ? cbottom_ : BitRShiftL(cbottom_, chrh), thresh_, blur_, i, clip_444), Crop(0, cbottom_crop, 0, 0)).TurnRight() : last.TurnRight()
+                cright_ > param_scale ? StackVertical(Crop(0, 0, 0, cright_crop).btb(i == 0 ? cright_ : BitRShiftL(cright_, chrw), thresh_, blur_, i, clip_444), Crop(0, cright_crop, 0, 0)).TurnRight() : last.TurnRight()
                 
                 if (i == 0)
                 {
