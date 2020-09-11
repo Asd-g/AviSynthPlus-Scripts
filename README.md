@@ -1,4 +1,4 @@
-##### Few scripts I created or updated (for full info read the scripts):
+##### Few scripts for AviSynth+ (for full info read the scripts):
 - AdaptiveGrain - it uses adaptive mask based on frame and pixels brightness to apply grain. More info included in the script.
 - AddBordersMod - due to MPEG-2 subsampling dirty lines / chroma bleeding could appear when AddBorders is used (more visible when the area is very saturared).
 - AutoResize_ - intelligent resize/crop to 1080p, 720p, SD (720px wide) or any custom resolution.
