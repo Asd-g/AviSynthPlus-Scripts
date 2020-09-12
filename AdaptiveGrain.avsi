@@ -23,51 +23,34 @@ Function AdaptiveGrain(clip c, clip "grain", float "luma_scaling", bool "mask8",
 {   
     grain = Default(grain, AddGrain(c, 0.25, constant=true))
     
+    c_bits = BitsPerComponent(c)
+    
     Assert(IsYUV(c) || IsYUVA(c) || IsYUV(grain) || IsYUVA(grain), "AdaptiveGrain: only Y/YUV planar format supported.")
     Assert(Width(c) == Width(grain) || Height(c) == Height(grain), " AdaptiveGrain: clips must have same dimensions.")
-    Assert(BitsPerComponent(c) == BitsPerComponent(grain), " AdaptiveGrain: clips must have same bit depth.")
+    Assert(c_bits == BitsPerComponent(grain), " AdaptiveGrain: clips must have same bit depth.")
     
     global luma_scaling = Default(luma_scaling, 10.0)
     mask8 = Default(mask8, true)
     
-    if (mask8 || (!mask8 && BitsPerComponent(c) == 8))
+    if (c_bits == 8)
     {
-        if (BitsPerComponent(c) > 8)
-        {
-            if (NumComponents(c) == 3)
-            {
-                z_ConvertFormat(c, pixel_type="yv12")
-                ScriptClip(""" mt_lut("x 16 <= 0 x 235 >= 0 x 17 == 85 x 18 == 170 1.0 x 255.0 / x 255.0 / x 255.0 / x 255.0 / x 255.0 / 18.188 * 45.47 - * 36.624 + * 9.46 - * 1.124 + * - "+ String(AverageLuma()) +" 255.0 / 2 ^ "+ String(luma_scaling) +" * ^ 255.0 * ? ? ? ?", u=2, v=2) """)
-            }
-            else
-            {
-                z_ConvertFormat(c, pixel_type="y8")
-                ScriptClip(""" mt_lut("x 16 <= 0 x 235 >= 0 x 17 == 85 x 18 == 170 1.0 x 255.0 / x 255.0 / x 255.0 / x 255.0 / x 255.0 / 18.188 * 45.47 - * 36.624 + * 9.46 - * 1.124 + * - "+ String(AverageLuma()) +" 255.0 / 2 ^ "+ String(luma_scaling) +" * ^ 255.0 * ? ? ? ?") """)
-            }
-            
-            ConvertBits(BitsPerComponent(c))
-        }
-        else
-        {
-            if (NumComponents(c) == 3)
-            {
-                ScriptClip(c, """ mt_lut("x 16 <= 0 x 235 >= 0 x 17 == 85 x 18 == 170 1.0 x 255.0 / x 255.0 / x 255.0 / x 255.0 / x 255.0 / 18.188 * 45.47 - * 36.624 + * 9.46 - * 1.124 + * - "+ String(AverageLuma()) +" 255.0 / 2 ^ "+ String(luma_scaling) +" * ^ 255.0 * ? ? ? ?", u=2, v=2) """)
-            }
-            else
-            {
-                ScriptClip(c, """ mt_lut("x 16 <= 0 x 235 >= 0 x 17 == 85 x 18 == 170 1.0 x 255.0 / x 255.0 / x 255.0 / x 255.0 / x 255.0 / 18.188 * 45.47 - * 36.624 + * 9.46 - * 1.124 + * - "+ String(AverageLuma()) +" 255.0 / 2 ^ "+ String(luma_scaling) +" * ^ 255.0 * ? ? ? ?") """)
-            }
-        }            
+        ScriptClip(c, """ mt_lut("x 16 <= 0 x 235 >= 0 x 17 == 85 x 18 == 170 1.0 x 16 - 219 / 0.994469 min x 16 - 219 / 0.994469 min x 16 - 219 / 0.994469 min x 16 - 219 / 0.994469 min x 16 - 219 / 0.994469 min 18.188 * 45.47 - * 36.624 + * 9.46 - * 1.124 + * - "+ String(AverageLuma()) +" 16 - 219 / 0.994469 min 2 ^ "+ String(luma_scaling) +" * ^ 255.0 * ? ? ? ? 0 255 clip") """)       
+    }
+    else if (mask8)
+    {
+        z_ConvertFormat(c, pixel_type="y8")
+        ScriptClip(""" mt_lut("x 16 <= 0 x 235 >= 0 x 17 == 85 x 18 == 170 1.0 x 16 - 219 / 0.994469 min x 16 - 219 / 0.994469 min x 16 - 219 / 0.994469 min x 16 - 219 / 0.994469 min x 16 - 219 / 0.994469 min 18.188 * 45.47 - * 36.624 + * 9.46 - * 1.124 + * - "+ String(AverageLuma()) +" 16 - 219 / 0.994469 min 2 ^ "+ String(luma_scaling) +" * ^ 255.0 * ? ? ? ? 0 255 clip") """)            
+        ConvertBits(BitsPerComponent(c))
     }
     else
     {
         if (NumComponents(c) == 3)
         {
-            ScriptClip(c, """ Expr("x 16 scaleb <= 0 x 235 scaleb >= 0 x 17 scaleb == 85 scaleb x 18 scaleb == 170 scaleb 1.0 x range_max / x range_max / x range_max / x range_max / x range_max / 18.188 * 45.47 - * 36.624 + * 9.46 - * 1.124 + * - "+ String(AverageLuma()) +" range_max / 2 ^ "+ String(luma_scaling) +" * ^ range_max * ? ? ? ?", "", "") """)
+            ScriptClip(c, """ Expr("x 16 scaleb <= 0 x 235 scaleb >= 0 x 17 scaleb == 85 scalef x 18 scaleb == 170 scalef 1.0 x 16 scaleb - 219 scaleb / 0.994469 min x 16 scaleb - 219 scaleb / 0.994469 min x 16 scaleb - 219 scaleb / 0.994469 min x 16 scaleb - 219 scaleb / 0.994469 min x 16 scaleb - 219 scaleb / 0.994469 min 18.188 * 45.47 - * 36.624 + * 9.46 - * 1.124 + * - "+ String(AverageLuma()) +" 16 scaleb - 219 scaleb / 0.994469 min 2 ^ "+ String(luma_scaling) +" * ^ range_max * ? ? ? ? 0 255 scalef clip", "", "") """)
         }
         else
         {
-            ScriptClip(c, """ Expr("x 16 scaleb <= 0 x 235 scaleb >= 0 x 17 scaleb == 85 scaleb x 18 scaleb == 170 scaleb 1.0 x range_max / x range_max / x range_max / x range_max / x range_max / 18.188 * 45.47 - * 36.624 + * 9.46 - * 1.124 + * - "+ String(AverageLuma()) +" range_max / 2 ^ "+ String(luma_scaling) +" * ^ range_max * ? ? ? ?") """)
+            ScriptClip(c, """ Expr("x 16 scaleb <= 0 x 235 scaleb >= 0 x 17 scaleb == 85 scalef x 18 scaleb == 170 scalef 1.0 x 16 scaleb - 219 scaleb / 0.994469 min x 16 scaleb - 219 scaleb / 0.994469 min x 16 scaleb - 219 scaleb / 0.994469 min x 16 scaleb - 219 scaleb / 0.994469 min x 16 scaleb - 219 scaleb / 0.994469 min 18.188 * 45.47 - * 36.624 + * 9.46 - * 1.124 + * - "+ String(AverageLuma()) +" 16 scaleb - 219 scaleb / 0.994469 min 2 ^ "+ String(luma_scaling) +" * ^ range_max * ? ? ? ? 0 255 scalef clip") """)
         }
     }
     
@@ -80,5 +63,5 @@ Function AdaptiveGrain(clip c, clip "grain", float "luma_scaling", bool "mask8",
     
     luma = Default(luma, false)
     
-    return mt_merge(c, grain, last, luma=luma).Limiter(16, 235, paramscale=true)
+    return mt_merge(c, grain, last, luma=luma).Limiter(paramscale=true)
 }
