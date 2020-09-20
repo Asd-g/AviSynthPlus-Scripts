@@ -1,4 +1,5 @@
 ## Changelog:
+# - allowed adj_val, prot_val, upper, prot_val2 to be non-array when row/column is array (FixCBr([1,2], 8))
 # - cosmetic changes
 # - added array support for parameters
 # - removed full_range parameter, added float prot_val2 parameter for protecting pixels above and below threshold simultaneously
@@ -39,7 +40,7 @@
 
 
 ## Example with arrays (AviSynth 3.6.x required)
-# FixRBr([100], [100]) # same as FixRBr(100, 100)
+# FixRBr([100], [100]) # same as FixRBr(100, 100)/FixRBr([100], 100)
 # FixRBr([100, 200], [100, -40]) # same as FixRBr(100, 100).FixRBr(200, -40)
 # FixRBr([100, 200], [100, -40], [120, 140]) # same as FixRBr(100, 100, 120).FixRBr(200, -40, 140)
 # FixRBr([100, 200], [100, -40], [120, 140], [false,true]) # same as FixRBr(100, 100, 120, false).FixRBr(200, -40, 140, true)
@@ -49,21 +50,22 @@
 
 Function FixRBr(clip c, val row, val adj_val, val "prot_val", val "upper", val "prot_val2")
 {
-    try
+    if (IsArray(row))
     {
         n = row.ArraySize() - 1
         c        
         
         for (i = 0, n)
         {
-            prot_val_ = Defined(prot_val) ? prot_val[i] : prot_val
-            upper_ = Defined(upper) ? upper[i] : upper
-            prot_val2_ = Defined(prot_val2) ? prot_val2[i] : prot_val2
+            adj_val_ = IsArray(adj_val) ? adj_val[i] : adj_val
+            prot_val_ = Defined(prot_val) ? IsArray(prot_val) ? prot_val[i] : prot_val : Undefined()
+            upper_ = Defined(upper) ? IsArray(upper) ? upper[i] : upper : Undefined()
+            prot_val2_ = Defined(prot_val2) ? IsArray(prot_val2) ? prot_val2[i] : prot_val2 : Undefined()
 
-            FixRBr_(row[i], adj_val[i], prot_val_, upper_, prot_val2_)
+            FixRBr_(row[i], adj_val_, prot_val_, upper_, prot_val2_)
         }
     }
-    catch(err_msg)
+    else
     {
         FixRBr_(c, row, adj_val, prot_val, upper, prot_val2)
     }
@@ -71,21 +73,22 @@ Function FixRBr(clip c, val row, val adj_val, val "prot_val", val "upper", val "
 
 Function FixCBr(clip c, val column, val adj_val, val "prot_val", val "upper", val "prot_val2")
 {
-    try
+    if (IsArray(column))
     {
-        n = row.ArraySize() - 1
+        n = column.ArraySize() - 1
         c        
         
         for (i = 0, n)
         {
-            prot_val_ = Defined(prot_val) ? prot_val[i] : prot_val
-            upper_ = Defined(upper) ? upper[i] : upper
-            prot_val2_ = Defined(prot_val2) ? prot_val2[i] : prot_val2
+            adj_val_ = IsArray(adj_val) ? adj_val[i] : adj_val
+            prot_val_ = Defined(prot_val) ? IsArray(prot_val) ? prot_val[i] : prot_val : Undefined()
+            upper_ = Defined(upper) ? IsArray(upper) ? upper[i] : upper : Undefined()
+            prot_val2_ = Defined(prot_val2) ? IsArray(prot_val2) ? prot_val2[i] : prot_val2 : Undefined()
 
-            FixCBr_(column[i], adj_val[i], prot_val_, upper_, prot_val2_)
+            FixCBr_(column[i], adj_val_, prot_val_, upper_, prot_val2_)
         }
     }
-    catch(err_msg)
+    else
     {
         FixCBr_(c, column, adj_val, prot_val, upper, prot_val2)
     }
