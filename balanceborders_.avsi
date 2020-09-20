@@ -90,8 +90,8 @@ Function BalanceBorders(clip c, val "cTop", val "cBottom", val "cLeft", val "cRi
     planecount = min(NumComponents(c), 3) - 1
     clip_444 = Is444(c)
        
-    try
-    {                
+    if (IsArray(cTop) || IsArray(cBottom) || IsArray(cLeft) || IsArray(cRight) || IsArray(thresh) || IsArray(blur))
+    {
         source_planes = [y, u, v]
 
         for (i = 0, planecount)
@@ -158,7 +158,7 @@ Function BalanceBorders(clip c, val "cTop", val "cBottom", val "cLeft", val "cRi
         
         CombinePlanes(yplane, uplane, vplane, planes="YUV", sample_clip=c)
     }
-    catch(err_msg)
+    else
     {
         cTop = Default(cTop, 0)
         cBottom = Default(cBottom, 0)

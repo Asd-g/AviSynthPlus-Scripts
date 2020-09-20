@@ -38,7 +38,7 @@ Function bbmod(clip c, val "cTop", val "cBottom", val "cLeft", val "cRight", val
     chrh = Is420(c) ? 1 : 0
     chrw = clip_444 ? 0 : 1
     
-    try
+    if (IsArray(cTop) || IsArray(cBottom) || IsArray(cLeft) || IsArray(cRight) || IsArray(thresh) || IsArray(blur))
     {
         source_planes = [y, u, v]
         
@@ -101,9 +101,9 @@ Function bbmod(clip c, val "cTop", val "cBottom", val "cLeft", val "cRight", val
             }
         }
         
-        CombinePlanes(yplane, uplane, vplane, planes="YUV", sample_clip=c)
+        return CombinePlanes(yplane, uplane, vplane, planes="YUV", sample_clip=c)
     }
-    catch(err_msg)
+    else
     {
         cTop = Default(cTop, 0)
         cBottom = Default(cBottom, 0)
@@ -196,7 +196,7 @@ Function bbmod(clip c, val "cTop", val "cBottom", val "cLeft", val "cRight", val
             vplane_ = ExtractV(c)
         }
         
-        CombinePlanes(yplane_, uplane_, vplane_, planes="YUV", sample_clip=c)
+        return CombinePlanes(yplane_, uplane_, vplane_, planes="YUV", sample_clip=c)
     }
 }
 
