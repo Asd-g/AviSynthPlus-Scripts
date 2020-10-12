@@ -12,6 +12,7 @@
 - FixChromaBleedingMod_ - high bit depth support.
 - Fixer - a wrapper of EdgeFixer.
 - Kirsch - Kirsch algorithm for edge mask.
+- LWLInfo - script displaying LSMASHSource frame properties.
 - MCTD_ - see the changelog in the script.
 - Offset_video_ - see the changelog in the script.
 - Rainbow_smooth_ - see the changelog in the script.
