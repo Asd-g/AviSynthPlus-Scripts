@@ -1,4 +1,5 @@
 ## Changelog:
+# - removed support for FFMS2 variables
 # - Added support for LSMASHSource picture type
 # - WriteFile replaced with RT_WriteFile
 # - script info changed, fixed ScriptClip error message
@@ -29,22 +30,22 @@
 
 
 ## Usage examples:
-# s=FFVideoSource(source).Crop(0, 148, -0, -148).ffinfo()
-# e=FFVideoSource(encode).ffinfo()
+# s=FFVideoSource(source).Crop(0, 148, -0, -148).ffinfo() # LWLibavVideoSource(source).Crop(0, 148, -0, -148).lwlinfo()
+# e=FFVideoSource(encode).ffinfo() # LWLibavVideoSource(encode).lwlinfo()
 # ComparisonGen(s, e, "rr.txt") # File rr.txt with frames number will be created and after source + encode images will be created. All files will be created in the same folder where the script is located.
 ###
-# s=FFVideoSource(source).Crop(0, 148, -0, -148).ffinfo()
-# e=FFVideoSource(encode).ffinfo()
+# s=FFVideoSource(source).Crop(0, 148, -0, -148).ffinfo() # LWLibavVideoSource(source).Crop(0, 148, -0, -148).lwlinfo()
+# e=FFVideoSource(encode).ffinfo() # LWLibavVideoSource(encode).lwlinfo()
 # ComparisonGen(s, e, "D:\rr.txt", pframes_file=true) # Already created file with name "rr.txt" in D:\ with frames number will be used.
 ###
 # ComparisonGen(s, e, "rr.txt", s_image_file="d:\source%03d.png", e_image_file="d:\encode%03d.png") # Created source images will be saved in D:\ with names "sourcexxx.png" and created encode images will be saved in D:\ with names "encodexxx.png".
 
 
-### How to run the script so you will have all images instead not only two.
-## The created .avs script could be opened with:
+## If you don't want to create script then write the commands (like examples above) in AvsPmod/VirtualDub, hit Refresh and wait until you see the message "Done.".
+## If you create .avs script then you could open it with:
 # - avsr ( https://forum.doom9.org/showthread.php?t=173259 ): avsr(64) script_name.avs;
 # - avsmeter ( https://forum.doom9.org/showthread.php?t=174797 ): avsmeter(64) script_name.avs;
-# - ffmpeg: ffmpeg -i script_name.avs -f null -                             ;
+# - ffmpeg: ffmpeg -i script_name.avs -f null - ;
 # - AvsPmod: 1) import("script_name.avs") and 2) Video->Run analysis pass.
 ##
 # Note - if AvsPmod is used and default s_image_file and e_image_file are used, the images will be saved in the AvsPmod folder instead in the folder where the script *.avs is located.
@@ -55,76 +56,66 @@ Function ComparisonGen(clip s, clip e, string "frames_file", string "s_image_fil
     Assert(FrameCount(s) == FrameCount(e), "ComparisonGen: clips must have same total number of frames.")
     Assert(PixelType(s) == PixelType(e), "ComparisonGen: clips must have same pixel type.")
     
-    global frames_file = Default(frames_file, "")
-    global s_image_file = Default(s_image_file, "%06dsource.png")
-    global e_image_file = Default(e_image_file, "%06dencode.png")
-    pframes_file = Default(pframes_file, false)
-    n = Default(n, 10)
-    offset_coef = Default(offset_coef, 0.05)
+    frames_file = Default(frames_file, "")
+    s_image_file = Default(s_image_file, "%06dsource.png")
+    e_image_file = Default(e_image_file, "%06dencode.png")
+    pframes_file = Default(pframes_file, false)  
     matrix = Default(matrix, "709=>rgb")
     pixel_type = Default(pixel_type, "RGBP")
-    
-    offset = Int(FrameCount(s) * offset_coef)
-    sf = SelectRangeEvery(s, (FrameCount(s) / n), 1, offset)
-    global ef = SelectRangeEvery(e, (FrameCount(e) / n), 1, offset)
-    
+
     if (!pframes_file)
     {
-        try
-        {
-            for (i = 0, FrameCount(sf) - 1)
-            {
-                FrameEvaluate(sf, """ if (FFPICT_TYPE == 80 || FFPICT_TYPE == 66)
-                    {
-                        AverageLuma(ef)
-                        
-                        if (FFPICT_TYPE == 66)
-                        {
-                            RT_WriteFile(frames_file, "%i", i, append=true)
-                        }
-                    } """, after_frame=true)
-                current_frame = i
-                AverageLuma()
-            }
-            
-            sff = FrameSel(sf, cmd=frames_file)
-            eff = FrameSel(ef, cmd=frames_file)
-        }
-        catch(err_msg)
-        {
-            for (i = 0, FrameCount(sf) - 1)
-            {
-                FrameEvaluate(sf, """ if (propGetString("_PictType") == "P" || propGetString("_PictType") == "B")
-                    {
-                        ef
-                        
-                        if (propGetString("_PictType") == "B")
-                        {
-                            RT_WriteFile(frames_file, "%i", i, append=true)
-                        }
-                    } """, after_frame=true)
-                current_frame = i
-                AverageLuma()
-            }
-            
-            sff = FrameSel(sf, cmd=frames_file)
-            eff = FrameSel(ef, cmd=frames_file)
-        }
+        n = Default(n, 10)
+        offset_coef = Default(offset_coef, 0.05)
+        offset = Int(FrameCount(s) * offset_coef)
+        sf = SelectRangeEvery(s, (FrameCount(s) / n), 1, offset)
+        ef = SelectRangeEvery(e, (FrameCount(e) / n), 1, offset)
+        
+        fw(sf, ef, frames_file)
     }
     else
     {
-        sff = FrameSel(s, cmd=frames_file)
-        eff = FrameSel(e, cmd=frames_file)
+        sf = s
+        ef = e
     }
     
-    si = z_ConvertFormat(sff, pixel_type=pixel_type, colorspace_op=matrix, resample_filter_uv="spline36", dither_type="error_diffusion")
-    global ei = z_ConvertFormat(eff, pixel_type=pixel_type, colorspace_op=matrix, resample_filter_uv="spline36", dither_type="error_diffusion")
+    simage(z_ConvertFormat(FrameSel(sf, cmd=frames_file), pixel_type=pixel_type, colorspace_op=matrix, resample_filter_uv="spline36", dither_type="error_diffusion"), s_image_file)
+    simage(z_ConvertFormat(FrameSel(ef, cmd=frames_file), pixel_type=pixel_type, colorspace_op=matrix, resample_filter_uv="spline36", dither_type="error_diffusion"), e_image_file)
     
-    for (i = 0, FrameCount(si) - 1)
+    Return MessageClip("Done.")
+
+}
+
+Function fw (clip s, clip e, string frames_file)
+{
+    global e = e
+    
+    for (i = 0, FrameCount(s) -1)
     {
-        FrameEvaluate(si, """ ImageWriter(s_image_file, type="png")
+        current_frame = i
+            
+        ScriptClip(s, """if (String(propGetString("_PictType")) == "P" || String(propGetString("_PictType")) == "B")
+            {
+                e
+                
+                if (String(propGetString("_PictType")) == "B")
+                {
+                    WriteFile(last, frames_file, "i")
+                }
+            } """, after_frame=true)
+                
+        AverageLuma()
+    }
+}
+
+function simage (clip s, string image_file)
+{
+    s
+    
+    for (i = 0, FrameCount() - 1)
+    {
+        current_frame = i
+        ImageWriter(image_file, start=i, end=i, type="png")
         ConvertToY8().AverageLuma()
-        ImageWriter(ei, e_image_file, type="png")
-        ConvertToY8().AverageLuma() """)
     }
 }
