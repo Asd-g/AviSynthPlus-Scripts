@@ -7,6 +7,7 @@
 - ChromaShiftSP2_ - high bit depth support.
 - ComparisonGen - it takes images from two videos in order to compare them.
 - debandmask_
+- FFInfo_props - script displaying FFMS2 frame properties.
 - FFMS2_ - additional parameters for better font styling.
 - FixBrightnessProtect3 - it changes the brightness of column/row.
 - FixChromaBleedingMod_ - high bit depth support.
