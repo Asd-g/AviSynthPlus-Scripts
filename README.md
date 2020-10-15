@@ -7,13 +7,12 @@
 - ChromaShiftSP2_ - high bit depth support.
 - ComparisonGen - it takes images from two videos in order to compare them.
 - debandmask_
-- FFInfo_props - script displaying FFMS2 frame properties.
 - FFMS2_ - additional parameters for better font styling.
 - FixBrightnessProtect3 - it changes the brightness of column/row.
 - FixChromaBleedingMod_ - high bit depth support.
 - Fixer - a wrapper of EdgeFixer.
 - Kirsch - Kirsch algorithm for edge mask.
-- LWLInfo - script displaying LSMASHSource frame properties.
+- LWLInfo - script displaying LSMASHSource/FFMS2/D2VSource frame properties.
 - MCTD_ - see the changelog in the script.
 - Offset_video_ - see the changelog in the script.
 - Rainbow_smooth_ - see the changelog in the script.
