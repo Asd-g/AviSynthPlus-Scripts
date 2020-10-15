@@ -1,7 +1,8 @@
 ## Changelog:
-# Add Crop() for cropping values >(-)1.
-# added left, top, right, bottom, fill_margins parameters
-# added dither_type parameter
+# Round to the nearest even when the fraction is 0.5. Mode is changed to integer when mode "sd" is not used.
+# Added Crop() for cropping values >(-)1.
+# Added left, top, right, bottom, fill_margins parameters.
+# Added dither_type parameter.
 
 
 # AutoResize function for AviSynth - intelligent resize to 1080p, 720p, SD (720px wide) or any custom resolution
@@ -9,7 +10,7 @@
 
 ### Usage
 ## AutoResize(clip c, string mode, int "left", int "top", int "right", int "bottom", string "resizer", string "dither_type", bool "fill_margins")
-# mode - the vertical resolution (e.g. 1080). "sd" mode gives DVD resolution (720xY)
+# mode - the vertical resolution (e.g. 1080). "sd" mode gives DVD resolution (720xY). When mode "sd" is not used the expected value is integer.
 # left, top, right, bottom - crop values. Same syntax as Crop (right and bottom must be negative). If the values are even, Crop() is used. If the values are odd and greater than 1, Crop() even numbers + FillMargins 1 line + Resizer_crop for 1 line are used. If the values are equal to 1, FillMargins 1 line + Resizer_crop for 1 line are used.
 # resizer - what resizer to be used. Default is z_Spline36Resize
 # dither_type - what dither type to be used if the resizer has dither option. Currently valid only for z_ resizers
@@ -18,16 +19,16 @@
 
 
 ## Examples
-# AutoResize("720", 0, 1, 0, -1) # Assume 1920x800_input. It's the same as FillMargins(0, 1, 0, 1).z_Spline36Resize(1280, 532, 0, 1, 0, -1, dither="ordered")
-# AutoResize("720", 0, 1, 0, -1, fill_margins=false) # Assume 1920x800_input. It's the same as z_Spline36Resize(1280, 532, 0, 1, 0, -1, dither="ordered")
-# AutoResize("720", 0, 138, 0, -138) # Assume 1920x1080_input. It's the same as Crop(0, 138, 0, -138).z_Spline36Resize(1280, 536, dither="ordered")
-# AutoResize("720", 0, 139, 0, -139) # Assume 1920x1080_input. It's the same as Crop(0, 138, 0, -138).FillMargins(0, 1, 0, 1).z_Spline36Resize(1280, 534, 0, 1, 0, -1, dither="ordered")
-# AutoResize("720", 0, 138, 0, -139) # Assume 1920x1080_input. It's the same as Crop(0, 138, 0, -138).FillMargins(0, 0, 0, 1).z_Spline36Resize(1280, 536, 0, 0, 0, -1, dither="ordered")
-# AutoResize("720") # Assume 1920x800_input. It's the same as z_Spline36Resize(1280, 534, dither="ordered")
-# AutoResize("720", dither_type="no") # Assume 1920x800_input. It's the same as z_Spline36Resize(1280, 534, dither="none")
+# AutoResize(720, 0, 1, 0, -1) # Assume 1920x800_input. It's the same as FillMargins(0, 1, 0, 1).z_Spline36Resize(1280, 532, 0, 1, 0, -1, dither="ordered")
+# AutoResize(720, 0, 1, 0, -1, fill_margins=false) # Assume 1920x800_input. It's the same as z_Spline36Resize(1280, 532, 0, 1, 0, -1, dither="ordered")
+# AutoResize(720, 0, 138, 0, -138) # Assume 1920x1080_input. It's the same as Crop(0, 138, 0, -138).z_Spline36Resize(1280, 536, dither="ordered")
+# AutoResize(720, 0, 139, 0, -139) # Assume 1920x1080_input. It's the same as Crop(0, 138, 0, -138).FillMargins(0, 1, 0, 1).z_Spline36Resize(1280, 534, 0, 1, 0, -1, dither="ordered")
+# AutoResize(720, 0, 138, 0, -139) # Assume 1920x1080_input. It's the same as Crop(0, 138, 0, -138).FillMargins(0, 0, 0, 1).z_Spline36Resize(1280, 536, 0, 0, 0, -1, dither="ordered")
+# AutoResize(720) # Assume 1920x800_input. It's the same as z_Spline36Resize(1280, 534, dither="ordered")
+# AutoResize(720, dither_type="no") # Assume 1920x800_input. It's the same as z_Spline36Resize(1280, 534, dither="none")
 
 
-function AutoResize(clip c, string mode, int "left", int "top", int "right", int "bottom", string "resizer", string "dither_type", bool "fill_margins")
+function AutoResize(clip c, val mode, int "left", int "top", int "right", int "bottom", string "resizer", string "dither_type", bool "fill_margins")
 {    
     left = default(left, 0)
     top = default(top, 0)
@@ -42,7 +43,7 @@ function AutoResize(clip c, string mode, int "left", int "top", int "right", int
     resizer = default(resizer, "z_Spline36Resize")
     dither_type = default(dither_type,  "ordered")
     
-    newsize = lcase(mode) == "sd" ? _AutoResizeSD(c) : _AutoResizeHD(c, int(value(mode)), left, top, right, bottom)    
+    newsize = IsString(mode) && lcase(mode) == "sd" ? _AutoResizeSD(c) : _AutoResizeHD(c, mode, left, top, right, bottom)    
         
     check_left = left > 0 && left % 2 != 0
     check_top = top > 0 && top % 2 != 0
@@ -54,10 +55,7 @@ function AutoResize(clip c, string mode, int "left", int "top", int "right", int
     crop_right = check_right ? right + 1 : right
     crop_bottom = check_bottom ? bottom + 1 : bottom
     
-    if (crop_left > 0 || crop_top > 0 || crop_right > 0 || crop_bottom > 0)
-    {
-        c = Crop(c, crop_left, crop_top, crop_right, crop_bottom)
-    }
+    if (crop_left > 0 || crop_top > 0 || crop_right > 0 || crop_bottom > 0) { c = Crop(c, crop_left, crop_top, crop_right, crop_bottom) }
     
     fill_margins = default(fill_margins, check_left || check_top || check_right || check_bottom ? true : false)
     
@@ -80,23 +78,27 @@ function AutoResize(clip c, string mode, int "left", int "top", int "right", int
 
 function _ResizeRoundClosest(float n)
 {
-    return int(round(n / 2.0) * 2.0)
+    q = n / 2.0
+    
+    if (Frac(q) == 0.5)
+    {
+        f = Floor(q)
+        return f % 2 == 0 ? Int(f * 2.0) : Int(Ceil(q) * 2.0)
+    }
+    else { return Int(Round(q) * 2.0) }
 }
  
 function _AutoResizeSD(clip c)
 {
-    w = 720
-    h = _ResizeRoundClosest(720 * (float(c.height) / float(c.width)))
-    return string(w) + "," + string(h)
+    return String(720) + "," + String(_ResizeRoundClosest(720 * (Float(Height(c)) / Float(Width(c)))))
 }
  
 function _AutoResizeHD(clip c, int mode, int left, int top, int right, int bottom)
 {
-    size = float(c.width - left + right) / float(c.height - top + bottom)
+    size = Float(Width(c) - left + right) / Float(Height(c) - top + bottom)
     div = 16.0 / 9.0
 
     w = size <= div ? _ResizeRoundClosest(mode * size) : _ResizeRoundClosest(mode * div)
-    h = size <= div ? mode : _ResizeRoundClosest(w / size)
  
-    return string(w) + "," + string(h)
+    return String(w) + "," + String(size <= div ? mode : _ResizeRoundClosest(w / size))
 }
