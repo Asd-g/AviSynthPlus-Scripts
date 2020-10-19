@@ -6,7 +6,7 @@ Structural SIMilarity Index Calculator
 The Structural SIMilarity (SSIM) index is a method for measuring the similarity between two images.
 It is based on the hypothesis that the HVS is highly adapted for extracting structural information,
 which compares local patterns of pixel intensities that have been normalized for luminance and contrast.
-The mean SSIM (MSSIM) index value of the distorted image will be stored as frame property 'PlaneSSIM' in the output clip.
+The mean SSIM (MSSIM) index value of the distorted image will be stored as frame property '_PlaneSSIM' in the output clip.
 The value of SSIM measures the structural similarity in an image.
 The higher the SSIM score, the higher the image perceptual quality.
 If "clip1" == "clip2", SSIM = 1.
