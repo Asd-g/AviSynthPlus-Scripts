@@ -11,6 +11,7 @@
 - FixBrightnessProtect3 - it changes the brightness of column/row.
 - FixChromaBleedingMod_ - high bit depth support.
 - Fixer - a wrapper of EdgeFixer.
+- IQA_downsample - downsampler for image quality assessment model.
 - Kirsch - Kirsch algorithm for edge mask.
 - LWLInfo - script displaying LSMASHSource/FFMS2/D2VSource frame properties.
 - MCTD_ - see the changelog in the script.
@@ -19,3 +20,4 @@
 - spline36resizemod_ - Spline36Resize for MPEG-2 chroma placement.
 - SupT - based on https://forum.doom9.org/showpost.php?p=1866983&postcount=7
 - Tonemapper - script for tonemapping.
+- vsSSIM - port of the VapourSynth SSIM.
