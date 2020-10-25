@@ -86,7 +86,7 @@ function AutoResize(clip c, val mode, int "left", int "top", int "right", int "b
  
 function _AutoResizeSD(clip c)
 {
-    return String(720) + "," + String(Int(RoundHalfToEven(720 * (Float(Height(c)) / Width(c)))))
+    return String(720) + "," + String(Int(RoundHalfToEven_mod2(720 * (Float(Height(c)) / Width(c)))))
 }
  
 function _AutoResizeHD(clip c, int mode, int left, int top, int right, int bottom)
