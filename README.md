@@ -15,9 +15,11 @@
 - IQA_downsample - downsampler for image quality assessment model.
 - Kirsch - Kirsch algorithm for edge mask.
 - LWLInfo - script displaying LSMASHSource/FFMS2/D2VSource frame properties.
+- MDSI - port of the VapourSynth MDSI.
 - MCTD_ - see the changelog in the script.
 - Offset_video_ - see the changelog in the script.
 - Rainbow_smooth_ - see the changelog in the script.
+- RoundHalfToEven
 - spline36resizemod_ - Spline36Resize for MPEG-2 chroma placement.
 - SupT - based on https://forum.doom9.org/showpost.php?p=1866983&postcount=7
 - Tonemapper - script for tonemapping.
