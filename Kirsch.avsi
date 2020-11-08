@@ -39,7 +39,7 @@ Function Kirsch(clip c, int "thY1", int "thY2", int "thC1", int "thC2", int "y",
     v = Default(v, 1)
     
     c
-	mt_logic(
+    return mt_logic(
         \ mt_logic(
             \ mt_logic(mt_edge("5,  5,  5, -3,  0, -3, -3, -3, -3 1", thY1, thY2, thC1, thC2, y, u, v, chroma),
                 \ mt_edge("-3,  5,  5,  5,  0, -3, -3, -3, -3 1", thY1, thY2, thC1, thC2, y, u, v, chroma), mode="max", y=y, u=u, v=v, chroma=chroma),
