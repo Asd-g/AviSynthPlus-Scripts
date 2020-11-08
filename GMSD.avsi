@@ -42,6 +42,11 @@ Ref:
 # y (default true), u (default false), v (default false): Which plane to process.
 
 
+### Changelog ###
+# - Replaced mt_convolution with mt_edge for ~15% speed up.
+# - Initial version.
+
+
 Function GMSD(clip clip1, clip clip2, bool "downsample", float "c", bool "show_map", bool "show", bool "y", bool "u", bool "v")
 {
     Assert(PixelType(clip1) == PixelType(clip2), "GMSD: clip1 and clip2 must be of the same format.")
@@ -76,8 +81,8 @@ Function GMSD(clip clip1, clip clip2, bool "downsample", float "c", bool "show_m
     }
     
     c = Default(c, 0.0026)
-    global quality_map = Expr(Expr(mt_convolution(clip1, "1 0 -1", "1 1 1", saturate=false), mt_convolution(clip1, "1 1 1", "1 0 -1", saturate=false), "x x * y y * +"),
-        \ Expr(mt_convolution(clip2, "1 0 -1", "1 1 1", saturate=false), mt_convolution(clip2, "1 1 1", "1 0 -1", saturate=false), "x x * y y * +"),
+    global quality_map = Expr(Expr(mt_edge(clip1, "1 0 -1 1 0 -1 1 0 -1 1", 0, 255), mt_edge(clip1, "1 1 1 0 0 0 -1 -1 -1 1", 0, 255), "x x * y y * +"),
+        \ Expr(mt_edge(clip2, "1 0 -1 1 0 -1 1 0 -1 1", 0, 255), mt_edge(clip2, "1 1 1 0 0 0 -1 -1 -1 1", 0, 255), "x x * y y * +"),
         \ "2 x y * sqrt * "+ String(c) +" + x y + "+ String(c) +" + /")
     
     show_map = Default(show_map, false)
