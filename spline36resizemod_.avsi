@@ -1,11 +1,16 @@
-# set float for the default values instead convert int to float
-# added high bit depth support
-# V3 (all previous versions are buggy, please upgrade)
-# Assumes MPEG-2 chroma placement for YV12, use Spline36Resize for MPEG-1 chroma placement.
+### Assumes MPEG-2 chroma placement for YV12, use Spline36Resize for MPEG-1 chroma placement.
+
+
+### Changelog ###
+# - Allowed 422 clips.
+# - Set float for the default values instead convert int to float.
+# - Added high bit depth support.
+# - V3 (all previous versions are buggy, please upgrade).
+
  
 function Spline36ResizeMod(clip c, int target_width, int target_height, float "src_left", float "src_top", float "src_width", float "src_height")
 {
-    Assert(Is420(c) || IsYV411(c), "Spline36ResizeMod: Supported color formats are YUV 4:2:0 and YV411.")
+    Assert(Is420(c) || Is422(c) || IsYV411(c), "Spline36ResizeMod: Supported color formats are YUV 4:2:0/4:2:2 and YV411.")
 
     src_left      = Default(src_left, 0.0)
     src_top       = Default(src_top, 0.0)
