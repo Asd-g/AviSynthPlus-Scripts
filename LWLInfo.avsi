@@ -1,71 +1,81 @@
-## Changelog:
-# - Added the other frame properties than picture type (_PictType) - _DurationNum, _DurationDen, _AbsoluteTime (FFMS2 only), _ColorRange (LSMASHSource/FFMS2), _Primaries (LSMASHSource/FFMS2), _Transfer (LSMASHSource/FFMS2), _Matrix, _ChromaLocation (LSMASHSource/FFMS2), _FieldBased, _SARNum (LSMASHSource/FFMS2), _SARDen (LSMASHSource/FFMS2), MasteringDisplayPrimariesX (LSMASHSource/FFMS2), MasteringDisplayPrimariesY (LSMASHSource/FFMS2), MasteringDisplayWhitePointX (LSMASHSource/FFMS2), MasteringDisplayWhitePointY (LSMASHSource/FFMS2), MasteringDisplayMinLuminance (LSMASHSource/FFMS2), MasteringDisplayMaxLuminance (LSMASHSource/FFMS2), ContentLightLevelMax (LSMASHSource/FFMS2), ContentLightLevelAverage (LSMASHSource/FFMS2), _AspectRatio (D2VSource), _GOPNumber (D2VSource), _GOPPosition (D2VSource), _GOPClosed (D2VSource), _EncodedFrameTop (D2VSource), _EncodedFrameBottom (D2VSource), _QuantsAverage (D2VSource), _QuantsMin (D2VSource), _QuantsMax (D2VSource).
+/*
+Script displaying LSMASHSource/FFMS2/D2VSource frame properties.
 
+The list below shows what the frame properties values corresponds to:
 
-### Script displaying LSMASHSource/FFMS2/D2VSource frame properties.
-## Frame properties have Int type.
-## The list below shows what the frame properties values corresponds to:
 ####### matrix #######
-# "rgb" (0)
-# "709" (1)
-# "unspec" (2)
-# "fcc" (4)
-# "470bg" (5)
-# "170m" (6)
-# "240m" (7)
-# "ycgco" (8)
-# "2020ncl"(9)
-# "2020cl" (10)
-# "chromancl" (12)
-# "chromacl" (13)
-# "ictcp" (14)
-####### transfer #######
-# "709" (1)
-# "unspec" (2)
-# "470m" (4)
-# "470bg" (5)
-# "601" (6)
-# "240m" (7)
-# "linear" (8)
-# "log100" (9)
-# "log316" (10)
-# "xvycc" (11)
-# "srgb" (13)
-# "2020_10" (14)
-# "2020_12" (15)
-# "st2084" (16)
-# "std-b67" (18)
-####### primaries #######
-# "709" (1)
-# "unspec" (2)
-# "470m" (4)
-# "470bg" (5)
-# "170m" (6)
-# "240m" (7)
-# "film" (8)
-# "2020" (9)
-# "st428" (10)
-# "st431-2" (11)
-# "st432-1" (12)
-# "jedec-p22" (22)
-####### color range #######
-# "limited" (1)
-# "full" (0)
-####### chroma location #######
-# "left" (0)
-# "center" (1)
-# "top_left" (2)
-# "top" (3)
-# "bottom_left" (4)
-# "bottom" (5)
-####### field based #######
-# "progressive" (0)
-# "top_field" (2)
-# "bottom_field" (1)
-####### gop closed #######
-# true (1)
-# false (0)
+"rgb" (0)
+"709" (1)
+"unspec" (2)
+"fcc" (4)
+"470bg" (5)
+"170m" (6)
+"240m" (7)
+"ycgco" (8)
+"2020ncl"(9)
+"2020cl" (10)
+"chromancl" (12)
+"chromacl" (13)
+"ictcp" (14)
 
+####### transfer #######
+"709" (1)
+"unspec" (2)
+"470m" (4)
+"470bg" (5)
+"601" (6)
+"240m" (7)
+"linear" (8)
+"log100" (9)
+"log316" (10)
+"xvycc" (11)
+"srgb" (13)
+"2020_10" (14)
+"2020_12" (15)
+"st2084" (16)
+"std-b67" (18)
+
+####### primaries #######
+"709" (1)
+"unspec" (2)
+"470m" (4)
+"470bg" (5)
+"170m" (6)
+"240m" (7)
+"film" (8)
+"2020" (9)
+"st428" (10)
+"st431-2" (11)
+"st432-1" (12)
+"jedec-p22" (22)
+
+####### color range #######
+"limited" (1)
+"full" (0)
+
+####### chroma location #######
+"left" (0)
+"center" (1)
+"top_left" (2)
+"top" (3)
+"bottom_left" (4)
+"bottom" (5)
+
+####### field based #######
+"progressive" (0)
+"top_field" (2)
+"bottom_field" (1)
+
+####### gop closed #######
+true (1)
+false (0)
+*/
+
+
+### Changelog ###
+# - Changed parameters from global to local. Changed default values - only framenum and picturetype are true.
+# - Added the other frame properties than picture type (_PictType) - _DurationNum, _DurationDen, _AbsoluteTime (FFMS2 only), _ColorRange (LSMASHSource/FFMS2), _Primaries (LSMASHSource/FFMS2), _Transfer (LSMASHSource/FFMS2), _Matrix, _ChromaLocation (LSMASHSource/FFMS2), _FieldBased, _SARNum (LSMASHSource/FFMS2), _SARDen (LSMASHSource/FFMS2), MasteringDisplayPrimariesX (LSMASHSource/FFMS2), MasteringDisplayPrimariesY (LSMASHSource/FFMS2), MasteringDisplayWhitePointX (LSMASHSource/FFMS2), MasteringDisplayWhitePointY (LSMASHSource/FFMS2), MasteringDisplayMinLuminance (LSMASHSource/FFMS2), MasteringDisplayMaxLuminance (LSMASHSource/FFMS2), ContentLightLevelMax (LSMASHSource/FFMS2), ContentLightLevelAverage (LSMASHSource/FFMS2), _AspectRatio (D2VSource), _GOPNumber (D2VSource), _GOPPosition (D2VSource), _GOPClosed (D2VSource), _EncodedFrameTop (D2VSource), _EncodedFrameBottom (D2VSource), _QuantsAverage (D2VSource), _QuantsMin (D2VSource), _QuantsMax (D2VSource).
+# - Initial version.
 
 
 Function LWLInfo(
@@ -112,47 +122,47 @@ Function LWLInfo(
 \ float "fontwidth",
 \ float "fontangle")
 {
-    global framenum = Default(framenum, true)
-    global sarnum = Default(sarnum, true)
-    global sarden = Default(sarden, true)
-    global durationnum = Default(durationnum, true)
-    global durationden = Default(durationden, true)
-    global absolutetime = Default(absolutetime, true)
-    global colorrange = Default(colorrange, true)
-    global primaries = Default(primaries, true)
-    global transfer = Default(transfer, true)
-    global matrix = Default(matrix, true)
-    global chromalocation = Default(chromalocation, true)
-    global picturetype = Default(picturetype, true)
-    global fieldbased = Default(fieldbased, true)
-    global masteringdisplayprimariesx = Default(masteringdisplayprimariesx, true)
-    global masteringdisplayprimariesy = Default(masteringdisplayprimariesy, true)
-    global masteringdisplaywhitepointx = Default(masteringdisplaywhitepointx, true)
-    global masteringdisplaywhitepointy = Default(masteringdisplaywhitepointy, true)
-    global masteringdisplayminluminance = Default(masteringdisplayminluminance, true)
-    global masteringdisplaymaxluminance = Default(masteringdisplaymaxluminance, true)
-    global contentlightlevelmax = Default(contentlightlevelmax, true)
-    global contentlightlevelaverage = Default(contentlightlevelaverage, true)
-    global aspectratio = Default(aspectratio, true)
-    global gopnumber = Default(gopnumber, true)
-    global gopposition = Default(gopposition, true)
-    global gopclosed = Default(gopclosed, true)
-    global encodedframetop = Default(encodedframetop, true)
-    global encodedframebottom = Default(encodedframebottom, true)
-    global quantsavg = Default(quantsavg, true)
-    global quantsmin = Default(quantsmin, true)
-    global quantsmax = Default(quantsmax, true)
-    global font = Default(font, "Arial")
-    global size = Default(size, 18)
-    global textcolor = Default(textcolor, $FFFF00)
-    global halocolor = Default(halocolor, $000000)
-    global align = Default(align, 7)
-    global spc = Default(spc, 0)
-    global lsp = Default(lsp, 1)
-    global fontwidth = Default(fontwidth, 0)
-    global fontangle = Default(fontangle, 0)
-    global x = Default(x, Defined(align) ? (align == 1 || align == 4 || align == 7) ? 8 : (align == 2 || align == 5 || align == 8) ? -1 : (align == 3 || align == 6 || align == 9) ? width(c) - 8 : NOP() : 8)
-    global y = Default(y, Defined(align) ? (align == 4 || align == 5 || align == 6) ? size : (align == 7 || align == 8 || align == 9) ? 0 : (align == 1 || align == 2 || align == 3) ? height(c) - 1 : NOP() : 0)
+    framenum = Default(framenum, true)
+    sarnum = Default(sarnum, false)
+    sarden = Default(sarden, false)
+    durationnum = Default(durationnum, false)
+    durationden = Default(durationden, false)
+    absolutetime = Default(absolutetime, false)
+    colorrange = Default(colorrange, false)
+    primaries = Default(primaries, false)
+    transfer = Default(transfer, false)
+    matrix = Default(matrix, false)
+    chromalocation = Default(chromalocation, false)
+    picturetype = Default(picturetype, true)
+    fieldbased = Default(fieldbased, false)
+    masteringdisplayprimariesx = Default(masteringdisplayprimariesx, false)
+    masteringdisplayprimariesy = Default(masteringdisplayprimariesy, false)
+    masteringdisplaywhitepointx = Default(masteringdisplaywhitepointx, false)
+    masteringdisplaywhitepointy = Default(masteringdisplaywhitepointy, false)
+    masteringdisplayminluminance = Default(masteringdisplayminluminance, false)
+    masteringdisplaymaxluminance = Default(masteringdisplaymaxluminance, false)
+    contentlightlevelmax = Default(contentlightlevelmax, false)
+    contentlightlevelaverage = Default(contentlightlevelaverage, false)
+    aspectratio = Default(aspectratio, false)
+    gopnumber = Default(gopnumber, false)
+    gopposition = Default(gopposition, false)
+    gopclosed = Default(gopclosed, false)
+    encodedframetop = Default(encodedframetop, false)
+    encodedframebottom = Default(encodedframebottom, false)
+    quantsavg = Default(quantsavg, false)
+    quantsmin = Default(quantsmin, false)
+    quantsmax = Default(quantsmax, false)
+    font = Default(font, "Arial")
+    size = Default(size, 18)
+    textcolor = Default(textcolor, $FFFF00)
+    halocolor = Default(halocolor, $000000)
+    align = Default(align, 7)
+    spc = Default(spc, 0)
+    lsp = Default(lsp, 1)
+    fontwidth = Default(fontwidth, 0)
+    fontangle = Default(fontangle, 0)
+    x = Default(x, Defined(align) ? (align == 1 || align == 4 || align == 7) ? 8 : (align == 2 || align == 5 || align == 8) ? -1 : (align == 3 || align == 6 || align == 9) ? width(c) - 8 : NOP() : 8)
+    y = Default(y, Defined(align) ? (align == 4 || align == 5 || align == 6) ? size : (align == 7 || align == 8 || align == 9) ? 0 : (align == 1 || align == 2 || align == 3) ? height(c) - 1 : NOP() : 0)
     
     ScriptClip(c, """ temp_prop = ""
     if (framenum) { temp_prop = temp_prop + "Frame Number: " + String(current_frame) + " of " + String(FrameCount()) + "\n" }
@@ -189,6 +199,6 @@ Function LWLInfo(
     if (quantsmin) { if (propGetType("_QuantsMin") > 0) { temp_prop = temp_prop + "Quants Min: " + String(propGetInt("_QuantsMin")) + "\n" } }
     if (quantsmax) { if (propGetType("_QuantsMax") > 0) { temp_prop = temp_prop + "Quants Max: " + String(propGetInt("_QuantsMax")) + "\n" } }
     
-    return Subtitle(temp_prop, x=x, y=y, font=font, size=size, text_color=textcolor, halo_color=halocolor, align=align, spc=spc, lsp=lsp, font_width=fontwidth, font_angle=fontangle)""", after_frame=true)
+    return Subtitle(temp_prop, x=x, y=y, font=font, size=size, text_color=textcolor, halo_color=halocolor, align=align, spc=spc, lsp=lsp, font_width=fontwidth, font_angle=fontangle)""", after_frame=true, args="framenum, sarnum, sarden, durationnum, durationden, absolutetime, colorrange, primaries, transfer, matrix, chromalocation, picturetype, fieldbased, masteringdisplayprimariesx, masteringdisplayprimariesy, masteringdisplaywhitepointx, masteringdisplaywhitepointy, masteringdisplayminluminance, masteringdisplaymaxluminance, contentlightlevelmax, contentlightlevelaverage, aspectratio, gopnumber, gopposition, gopclosed, encodedframetop, encodedframebottom, quantsavg, quantsmin, quantsmax, font, size, textcolor, halocolor, align, spc, lsp, fontwidth, fontangle, x, y")
 }
     
