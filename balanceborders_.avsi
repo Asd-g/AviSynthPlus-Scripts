@@ -1,54 +1,49 @@
-## Changelog:
-# - code clean up; fixed cBottom assert for chroma; arrays - if a single value is specified, it will be used for all planes, if two values are given then the second value will be used for the third plane as well.
-# - fixed error when cTop/cBottom/cLeft/cRight=1.
-# - merged all calculations in one expression that leads to ~15-20% less memory usage, ~10% speedup with 16-bit clips.
-# - added array support for parameters.
-# - replaced ResampleMT with z_ resizers.
-# - added usage info; intermediate function name changed; replaced lutxyz -> 8-bit ~15% speedup, 10-bit ~75% speedup, 16-bit ~50% speedup; removed full_range parameter.
-# - added Y/YUV422/YUV444 processing.
-# - additional options bool y (true), bool u (true), bool v (true) for processing different planes; renamed to balanceborders_.avsi.
-# - fixed default thresh value; allowed 32-bit input; added bool full_range parameter (default=false) - it works only for high bit depth; it determines how the scaling to the input bit depth->8-bit->input bit depth is done ( http://avisynth.nl/index.php/MaskTools2#Expression_syntax_supporting_bit_depth_independent_expressions ).
-# - changed the thresh type int -> float, thresh is always in the range [0,128] (before it was in the range [0,bit depth half range]).
-# - all options are optional (balanceborders(2), balanceborders(cleft=1) and so on). Added restriction - clip width / height should be > cLeft*4, cRgith*4 / cTop*4, cBottom*4.
-# - processing only part of the frame.
+/*
+by PL
 
+Функция изменяет значения крайних пикселей клипа так, чтобы они были "более похожи" на соседние,
+что, возможно, позволит избежать "сильного" использования Crop() для удаления "неприятных краёв",
+не очень сильно отличающихся от "основного" изображения. См. примеры скринов.
+ */
+ 
 
-## Example with arrays (AviSynth 3.6.x required)
-# BalanceBorders([60,20], cleft=[40,20], y=true, u=true, v= false) # same as BalanceBorders(60, cleft=40, blur=999, y=true, u=false, v=false).BalanceBorders(20, cleft=20, y=false, u=true, v=false)
-# BalanceBorders([60], cleft=[40]) # same as BalanceBorders(60, cleft=40)/BalanceBorders(60, cleft=[40])/BalanceBorders([60], cleft=40)
-# BalanceBorders([60,60], cleft=[40,40], thresh=[12,12], blur=[100,100], y=false, u=true, v= true) # same as BalanceBorders(60, cleft=40, thresh=12, blur=100, y=false)/BalanceBorders([x,60,60], cleft=[x,40,40], thresh=[x,12,12], blur=[x,100,100], y=false, u=true, v= true)
-# BalanceBorders([60,20,40], cleft=[40,20,10], thresh=[12,4,5], blur=[100,999,20]) # same as BalanceBorders(60, cleft=40, thresh=12, blur=100, u=false, v=false).BalanceBorders(20, cleft=20, thresh=4, y=false, v=false).BalanceBorders(40, cleft=10, thresh=5, blur=20, y=false, u=false)
+### Usage ###
+###
+# BalanceBorders(clip c, val "cTop", val "cBottom", val "cLeft", val "cRight", val "thresh", val "blur", bool "y", bool "u", bool "v", string "cloc")
+###
+## Parameters ##
+#---------------
+# c: Input clip.
+#---------------
+# cTop, cBottom, cLeft, cRight (default 0): The number of lines to be filtered along each edge.
+# If single number is used: it's applied for all three planes.
+# If array is used: the first number is applied to luma plane, the second number - u plane, the third number - v plane.
+# If array of one number is used: the number is applied for all thre planes.
+# If array of two numbers is used: the first number - luma plane, the second plane - u and v planes.
+#---------------
+# thresh (default 128.0): Threshold of the filtering.
+# Higher values: more filtering.
+# Lower values: less filtering.
+# Recommended values: 0..16.0 or 128.0.
+# If single number is used: it's applied for all three planes.
+# If array is used: the first number is applied to luma plane, the second number - u plane, the third number - v plane.
+# If array of one number is used: the number is applied for all thre planes.
+# If array of two numbers is used: the first number - luma plane, the second plane - u and v planes.
+#---------------
+# blur (default 999): Blur strength.
+# Higher values: weak blurring.
+# Lower values: strong blurring.
+# Recommended values: 1..20 or 999.
+# If single number is used: it's applied for all three planes.
+# If array is used: the first number is applied to luma plane, the second number - u plane, the third number - v plane.
+# If array of one number is used: the number is applied for all thre planes.
+# If array of two numbers is used: the first number - luma plane, the second plane - u and v planes.
+#---------------
+# y, u, v (default true): Whether to filter the corresponding plane.
+#---------------
+# cloc (default "left"): Chroma location of the video.
+# Possible values: "left", "center", "top_left".
 
-
-#ОПИСАНИЕ:
-  #------------------------------------------------------------------------------------------------------------------------------
-  # function BalanceBorders(clip c, int cTop, int cBottom, int cLeft, int cRight, int "thresh", int "blur")
-  #
-  # //by PL — [2009.09.25] v0.2 :)
-  #
-  # Функция изменяет значения крайних пикселей клипа так, чтобы они были "более похожи" на соседние,
-  # что, возможно, позволит избежать "сильного" использования Crop() для удаления "неприятных краёв",
-  # не очень сильно отличающихся от "основного" изображения. См. примеры скринов.
-  #------------------------------------------------------------------------------------------------------------------------------
-
-#ПАРАМЕТРЫ:
-  #------------------------------------------------------------------------------------------------------------------------------
-  # с - Область изображения "в середине" в процессе обработки не изменяется.
-  #
-  # cTop, cBottom, cLeft, cRight - range[0..inf]
-  #   количество изменяемых пикселей с каждой стороны.
-  #   Не случится ничего очень страшного, если указать значения,
-  #   больше необходимого в вашем случае минимума,
-  #   но, для достижения хорошего результата, "лучше не надо"...
-  #
-  # "thresh" - range[0..128] default[128] recommended[0..16 или 128]
-  #   порог допустимых изменений для локального подбора цвета.
-  #
-  # "blur" - range[1..inf] default[999] recommended[1..20 или 999]
-  #   степень размытия для локального подбора цветов,
-  #   меньшие значения дают более точное соответствие цветов,
-  #   большие значения дают более точную передачу рисунка.
-  #-------------------------------------------------------------------------------------------------------------------------------
 
 #СОВЕТЫ:
   #-------------------------------------------------------------------------------------------------------------------------------
@@ -77,9 +72,57 @@
   #   BalanceBorders(3,3,2,2, thresh=8,   blur=4)  //несильно изменяет "основную проблемную область"
   #   BalanceBorders(1,1,0,0, thresh=128, blur=1)  //заменяет верхнюю и нижнюю строку пикселей (для удаления "чёрных полос")
   #-------------------------------------------------------------------------------------------------------------------------------
+  
+  
+### Example with arrays (AviSynth 3.6.x required) ###
+/*
+BalanceBorders([60,20], cleft=[40,20], y=true, u=true, v= false) # same as BalanceBorders(60, cleft=40, blur=999, y=true, u=false, v=false).BalanceBorders(20, cleft=20, y=false, u=true, v=false)
+*/
+###
+/*
+BalanceBorders([60], cleft=[40]) # same as BalanceBorders(60, cleft=40) or BalanceBorders(60, cleft=[40]) or BalanceBorders([60], cleft=40)
+*/
+###
+/*
+BalanceBorders([60,60], cleft=[40,40], thresh=[12,12], blur=[100,100], y=false, u=true, v= true) # same as BalanceBorders(60, cleft=40, thresh=12, blur=100, y=false) or BalanceBorders([1,60,60], cleft=[1,40,40], thresh=[1,12,12], blur=[1,100,100], y=false, u=true, v= true)
+/*
+###
+/*
+BalanceBorders([60,20,40], cleft=[40,20,10], thresh=[12,4,5], blur=[100,999,20]) # same as BalanceBorders(60, cleft=40, thresh=12, blur=100, u=false, v=false).BalanceBorders(20, cleft=20, thresh=4, y=false, v=false).BalanceBorders(40, cleft=10, thresh=5, blur=20, y=false, u=false)
+*/
+###
 
 
-Function BalanceBorders(clip c, val "cTop", val "cBottom", val "cLeft", val "cRight", val "thresh", val "blur", bool "y", bool "u", bool "v")
+### Changelog ###
+#---------------
+# Added parameter "cloc".
+#---------------
+# Code clean up; fixed cBottom assert for chroma; arrays - if a single value is specified, it will be used for all planes, if two values are given then the second value will be used for the third plane as well.
+#---------------
+# Fixed error when cTop/cBottom/cLeft/cRight=1.
+#---------------
+# Merged all calculations in one expression that leads to ~15-20% less memory usage, ~10% speedup with 16-bit clips.
+#---------------
+# Added array support for parameters.
+#---------------
+# Replaced ResampleMT with z_ resizers.
+#---------------
+# Added usage info; intermediate function name changed; replaced lutxyz -> 8-bit ~15% speedup, 10-bit ~75% speedup, 16-bit ~50% speedup; removed full_range parameter.
+#---------------
+# Added Y/YUV422/YUV444 processing.
+#---------------
+# Additional options bool y (true), bool u (true), bool v (true) for processing different planes; renamed to balanceborders_.avsi.
+#---------------
+# Fixed default thresh value; allowed 32-bit input; added bool full_range parameter (default=false) - it works only for high bit depth; it determines how the scaling to the input bit depth->8-bit->input bit depth is done ( http://avisynth.nl/index.php/MaskTools2#Expression_syntax_supporting_bit_depth_independent_expressions ).
+#---------------
+# Changed the thresh type int -> float, thresh is always in the range [0,128] (before it was in the range [0,bit depth half range]).
+#---------------
+# All options are optional (balanceborders(2), balanceborders(cleft=1) and so on). Added restriction - clip width / height should be > cLeft*4, cRgith*4 / cTop*4, cBottom*4.
+#---------------
+# Processing only part of the frame.
+
+
+Function BalanceBorders(clip c, val "cTop", val "cBottom", val "cLeft", val "cRight", val "thresh", val "blur", bool "y", bool "u", bool "v", string "cloc")
 {
     Assert(isYUV(c), "BalanceBorders: This is not an YUV/Y clip.")
      
@@ -130,13 +173,17 @@ Function BalanceBorders(clip c, val "cTop", val "cBottom", val "cLeft", val "cRi
         \ Assert(ArraySize(blur) == 3, "BalanceBorders: more blur given than there are planes.") :
     \ Defined(blur) ? blur : 999
     
+    cloc = Default(cloc, "left")
+    
+    Assert(cloc == "left" || cloc == "top_left" || cloc == "center", "BalanceBorders: cloc must be one of the values 'left', 'top_left', 'center'.")
+    
     source_planes = [y, u, v]
     clip_444 = Is444(c)
-    chrh = Is420(c) ? 1 : 0
+    clip_420 = Is420(c)
+    chrh = clip_420 ? 1 : 0
     chrw = clip_444 ? 0 : 1
-    planecount = min(NumComponents(c), 3) - 1
     
-    for (i = 0, planecount)
+    for (i = 0, min(NumComponents(c), 3) - 1)
     {
         if (i == 0) { ExtractY(c) }
         else if (i == 1) { ExtractU(c) }
@@ -164,16 +211,16 @@ Function BalanceBorders(clip c, val "cTop", val "cBottom", val "cLeft", val "cRi
                 cbottom_crop = cbottom_ * 2
                 cright_crop = cright_ * 2
                 
-                if (ctop_ > 0) { StackVertical(Crop(0, 0, 0, ctop_crop).BalanceTopBorder(ctop_, thresh_, blur_, i, clip_444), Crop(0, ctop_crop, 0, 0)).TurnRight() }
+                if (ctop_ > 0) { StackVertical(Crop(0, 0, 0, ctop_crop).BalanceTopBorder(ctop_, thresh_, blur_, i, clip_444, clip_420, cloc), Crop(0, ctop_crop, 0, 0)).TurnRight() }
                 else { TurnRight() }            
                 
-                if (cleft_ > 0) { StackVertical(Crop(0, 0, 0, cleft_crop).BalanceTopBorder(cleft_, thresh_, blur_, i, clip_444), Crop(0, cleft_crop, 0, 0)).TurnRight() }
+                if (cleft_ > 0) { StackVertical(Crop(0, 0, 0, cleft_crop).BalanceTopBorder(cleft_, thresh_, blur_, i, clip_444, clip_420, cloc), Crop(0, cleft_crop, 0, 0)).TurnRight() }
                 else { TurnRight() }
                 
-                if (cbottom_ > 0) { StackVertical(Crop(0, 0, 0, cbottom_crop).BalanceTopBorder(cbottom_ , thresh_, blur_, i, clip_444), Crop(0, cbottom_crop, 0, 0)).TurnRight() }
+                if (cbottom_ > 0) { StackVertical(Crop(0, 0, 0, cbottom_crop).BalanceTopBorder(cbottom_ , thresh_, blur_, i, clip_444, clip_420, cloc), Crop(0, cbottom_crop, 0, 0)).TurnRight() }
                 else { TurnRight() }
                 
-                if (cright_ > 0) { StackVertical(Crop(0, 0, 0, cright_crop).BalanceTopBorder(cright_, thresh_, blur_, i, clip_444), Crop(0, cright_crop, 0, 0)).TurnRight() }
+                if (cright_ > 0) { StackVertical(Crop(0, 0, 0, cright_crop).BalanceTopBorder(cright_, thresh_, blur_, i, clip_444, clip_420, cloc), Crop(0, cright_crop, 0, 0)).TurnRight() }
                 else { TurnRight() }
                 
                 yplane = last
@@ -188,16 +235,16 @@ Function BalanceBorders(clip c, val "cTop", val "cBottom", val "cLeft", val "cRi
                 cbottom_crop = BitRShiftL(cbottom_ * 2, chrh)
                 cright_crop = BitRShiftL(cright_ * 2, chrw)
                 
-                if (ctop_ > 1) { StackVertical(Crop(0, 0, 0, ctop_crop).BalanceTopBorder(BitRShiftL(ctop_, chrh), thresh_, blur_, i, clip_444), Crop(0, ctop_crop, 0, 0)).TurnRight() }
+                if (ctop_ > 1) { StackVertical(Crop(0, 0, 0, ctop_crop).BalanceTopBorder(BitRShiftL(ctop_, chrh), thresh_, blur_, i, clip_444, clip_420, cloc), Crop(0, ctop_crop, 0, 0)).TurnRight() }
                 else { TurnRight() }
                 
-                if (cleft_ > 1) { StackVertical(Crop(0, 0, 0, cleft_crop).BalanceTopBorder(BitRShiftL(cleft_, chrw), thresh_, blur_, i, clip_444), Crop(0, cleft_crop, 0, 0)).TurnRight() }
+                if (cleft_ > 1) { StackVertical(Crop(0, 0, 0, cleft_crop).BalanceTopBorder(BitRShiftL(cleft_, chrw), thresh_, blur_, i, clip_444, clip_420, cloc), Crop(0, cleft_crop, 0, 0)).TurnRight() }
                 else { TurnRight() }
                 
-                if (cbottom_ > 1) { StackVertical(Crop(0, 0, 0, cbottom_crop).BalanceTopBorder(BitRShiftL(cbottom_, chrh), thresh_, blur_, i, clip_444), Crop(0, cbottom_crop, 0, 0)).TurnRight() }
+                if (cbottom_ > 1) { StackVertical(Crop(0, 0, 0, cbottom_crop).BalanceTopBorder(BitRShiftL(cbottom_, chrh), thresh_, blur_, i, clip_444, clip_420, cloc), Crop(0, cbottom_crop, 0, 0)).TurnRight() }
                 else { TurnRight() }
                 
-                if (cright_ > 1) { StackVertical(Crop(0, 0, 0, cright_crop).BalanceTopBorder(BitRShiftL(cright_, chrw), thresh_, blur_, i, clip_444), Crop(0, cright_crop, 0, 0)).TurnRight() }
+                if (cright_ > 1) { StackVertical(Crop(0, 0, 0, cright_crop).BalanceTopBorder(BitRShiftL(cright_, chrw), thresh_, blur_, i, clip_444, clip_420, cloc), Crop(0, cright_crop, 0, 0)).TurnRight() }
                 else { TurnRight() }
                 
                 if (i == 1) { uplane = last }
@@ -215,7 +262,7 @@ Function BalanceBorders(clip c, val "cTop", val "cBottom", val "cLeft", val "cRi
     return CombinePlanes(yplane, uplane, vplane, planes="YUV", sample_clip=c)
 }
 
-function BalanceTopBorder(clip c, int cTop, float "thresh", int "blur", int "plane", bool "clip_444")
+function BalanceTopBorder(clip c, int cTop, float thresh, int blur, int plane, bool clip_444, bool clip_420, string cloc)
 {   
     cWidth = c.width
     cHeight = c.height
@@ -244,13 +291,28 @@ function BalanceTopBorder(clip c, int cTop, float "thresh", int "blur", int "pla
     {
         Expr(original, originalBlur, referenceBlur, "z y - "+ String(thresh) +" scaleb > x "+ String(thresh) +" scaleb + z y - "+ String(-thresh) +" scaleb < x "+ String(thresh) +" scaleb - z y - x + ? ? 16 scaleb 235 scaleb clip")
         
-        StackVertical(last, c2.Crop(0, cTop * 2, cWidth * 2, (cHeight - cTop) * 2)).z_PointResize(cWidth, cHeight)
+        StackVertical(last, c2.Crop(0, cTop * 2, cWidth * 2, (cHeight - cTop) * 2))
+        z_PointResize(cWidth, cHeight)
     }
     else
     {
         if (BitsPerComponent(c) == 32) { Expr(original, originalBlur, referenceBlur, "z y - "+ String(thresh) +" 128 - scaleb 0.5 + > x "+ String(thresh) +" 128 - scaleb 0.5 + + z y - "+ String(-thresh) +" 128 - scaleb 0.5 + < x "+ String(thresh) +" 128 - scaleb 0.5 + - z y - x + ? ? -0.43921568627 0.43921568627 clip") }
         else { Expr(original, originalBlur, referenceBlur, "z y - "+ String(thresh) +" scaleb > x "+ String(thresh) +" scaleb + z y - "+ String(-thresh) +" scaleb < x "+ String(thresh) +" scaleb - z y - x + ? ? 16 scaleb 240 scaleb clip") }
         
-        StackVertical(last, c2.Crop(0, cTop * 2, cWidth * 2, (cHeight - cTop) * 2)).z_PointResize(cWidth, cHeight, !clip_444 ? -0.5 * ((cWidth * 2 / cWidth) - 1) : 0)
+        StackVertical(last, c2.Crop(0, cTop * 2, cWidth * 2, (cHeight - cTop) * 2))
+        chroma_shift_balanceborders(clip_444, clip_420, cloc)
     }
+}
+
+Function chroma_shift_balanceborders(clip c, bool clip_444, bool clip_420, string cloc)
+{
+    c
+
+    if (!clip_444)
+    {
+        if ((clip_420 && cloc == "left") || (!clip_420 && cloc != "center")) { z_PointResize(Width() / 2, Height() / 2, -0.25) }
+        else if (clip_420 && cloc == "top_left") { z_PointResize(Width() / 2, Height() / 2, -0.25, -0.25) }
+        else { z_PointResize(Width() / 2, Height() / 2) }
+    }
+    else { z_PointResize(Width() / 2, Height() / 2) }
 }
