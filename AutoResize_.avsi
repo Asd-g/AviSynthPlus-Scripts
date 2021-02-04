@@ -1,11 +1,3 @@
-### Changelog ###
-# - Moved rounding function as standalone function (RoundHalfToEven.avsi). Don't use mod2 when calculating the height of yv24/yv16.
-# - Round to the nearest even when the fraction is 0.5. Mode is changed to integer when mode "sd" is not used.
-# - Added Crop() for cropping values >(-)1.
-# - Added left, top, right, bottom, fill_margins parameters.
-# - Added dither_type parameter.
-
-
 ### AutoResize function for AviSynth - intelligent resize to 1080p, 720p, SD (720px wide) or any custom resolution
 
 
@@ -27,13 +19,48 @@
 
 
 ### Examples ###
-# AutoResize(720, 0, 1, 0, -1) # Assume 1920x800_input. It's the same as FillMargins(0, 1, 0, 1).z_Spline36Resize(1280, 532, 0, 1, 0, -1, dither="ordered")
-# AutoResize(720, 0, 1, 0, -1, fill_margins=false) # Assume 1920x800_input. It's the same as z_Spline36Resize(1280, 532, 0, 1, 0, -1, dither="ordered")
-# AutoResize(720, 0, 138, 0, -138) # Assume 1920x1080_input. It's the same as Crop(0, 138, 0, -138).z_Spline36Resize(1280, 536, dither="ordered")
-# AutoResize(720, 0, 139, 0, -139) # Assume 1920x1080_input. It's the same as Crop(0, 138, 0, -138).FillMargins(0, 1, 0, 1).z_Spline36Resize(1280, 534, 0, 1, 0, -1, dither="ordered")
-# AutoResize(720, 0, 138, 0, -139) # Assume 1920x1080_input. It's the same as Crop(0, 138, 0, -138).FillMargins(0, 0, 0, 1).z_Spline36Resize(1280, 536, 0, 0, 0, -1, dither="ordered")
-# AutoResize(720) # Assume 1920x800_input. It's the same as z_Spline36Resize(1280, 534, dither="ordered")
-# AutoResize(720, dither_type="no") # Assume 1920x800_input. It's the same as z_Spline36Resize(1280, 534, dither="none")
+/*
+AutoResize(720, 0, 1, 0, -1) # Assume 1920x800_input. It's the same as FillMargins(0, 1, 0, 1).z_Spline36Resize(1280, 532, 0, 1, 0, -1, dither="ordered")
+*/
+###
+/*
+AutoResize(720, 0, 1, 0, -1, fill_margins=false) # Assume 1920x800_input. It's the same as z_Spline36Resize(1280, 532, 0, 1, 0, -1, dither="ordered")
+*/
+###
+/*
+AutoResize(720, 0, 138, 0, -138) # Assume 1920x1080_input. It's the same as Crop(0, 138, 0, -138).z_Spline36Resize(1280, 536, dither="ordered")
+*/
+###
+/*
+AutoResize(720, 0, 139, 0, -139) # Assume 1920x1080_input. It's the same as Crop(0, 138, 0, -138).FillMargins(0, 1, 0, 1).z_Spline36Resize(1280, 534, 0, 1, 0, -1, dither="ordered")
+*/
+###
+/*
+AutoResize(720, 0, 138, 0, -139) # Assume 1920x1080_input. It's the same as Crop(0, 138, 0, -138).FillMargins(0, 0, 0, 1).z_Spline36Resize(1280, 536, 0, 0, 0, -1, dither="ordered")
+*/
+###
+/*
+AutoResize(720) # Assume 1920x800_input. It's the same as z_Spline36Resize(1280, 534, dither="ordered")
+*/
+###
+/*
+AutoResize(720, dither_type="no") # Assume 1920x800_input. It's the same as z_Spline36Resize(1280, 534, dither="none")
+*/
+
+
+### Changelog ###
+#---------------
+# "SD" mode: fixed target resolution when crop values are used.
+#---------------
+# Moved rounding function as standalone function (RoundHalfToEven.avsi). Don't use mod2 when calculating the height of yv24/yv16.
+#---------------
+# Round to the nearest even when the fraction is 0.5. Mode is changed to integer when mode "sd" is not used.
+#---------------
+# Added Crop() for cropping values >(-)1.
+#---------------
+# Added left, top, right, bottom, fill_margins parameters.
+#---------------
+# Added dither_type parameter.
 
 
 function AutoResize(clip c, val mode, int "left", int "top", int "right", int "bottom", string "resizer", string "dither_type", bool "fill_margins")
@@ -51,7 +78,7 @@ function AutoResize(clip c, val mode, int "left", int "top", int "right", int "b
     resizer = default(resizer, "z_Spline36Resize")
     dither_type = default(dither_type,  "ordered")
     
-    newsize = IsString(mode) && lcase(mode) == "sd" ? _AutoResizeSD(c) : _AutoResizeHD(c, mode, left, top, right, bottom)    
+    newsize = IsString(mode) && lcase(mode) == "sd" ? _AutoResizeSD(c, top, bottom) : _AutoResizeHD(c, mode, left, top, right, bottom)    
         
     check_left = left > 0 && left % 2 != 0
     check_top = top > 0 && top % 2 != 0
@@ -84,9 +111,9 @@ function AutoResize(clip c, val mode, int "left", int "top", int "right", int "b
     }
 }
  
-function _AutoResizeSD(clip c)
+function _AutoResizeSD(clip c, int top, int bottom)
 {
-    return String(720) + "," + String(Int(RoundHalfToEven_mod2(720 * (Float(Height(c)) / Width(c)))))
+    return String(720) + "," + String(Int(RoundHalfToEven_mod2(720 * (Float(Height(c) - top + bottom) / Width(c)))))
 }
  
 function _AutoResizeHD(clip c, int mode, int left, int top, int right, int bottom)
