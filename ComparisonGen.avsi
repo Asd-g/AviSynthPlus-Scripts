@@ -97,6 +97,9 @@ Note - if AvsPmod is used and default s_image_file and e_image_file are used, th
 
 
 ### Changelog ###
+#---------------
+# Fixed error when pixel_type="RGBP16".
+#---------------
 # Added suport for up to 5 clips.
 # Added new parameter 'frame_type'.
 # Changed clip type to array.
@@ -254,6 +257,6 @@ function simage (clip s, string image_file)
     {
         current_frame = i
         ImageWriter(image_file, start=i, end=i, type="png")
-        ConvertToY8().AverageLuma()
+        ConvertToY().AverageLuma()
     }
 }
