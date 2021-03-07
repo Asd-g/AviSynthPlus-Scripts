@@ -4,6 +4,7 @@
 - AutoResize_ - intelligent resize/crop to 1080p, 720p, SD (720px wide) or any custom resolution.
 - balanceborders_ - it fixes dirty lines on the borders.
 - bbmod_ - balanceborders mod that using division instead subtraction for the filtering.
+- bt2390_pq - tone mapping based on BT.2390 (PQ)
 - ChromaShiftSP2_ - high bit depth support.
 - ComparisonGen - it takes images from two videos in order to compare them.
 - debandmask_
