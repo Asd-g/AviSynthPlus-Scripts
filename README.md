@@ -1,6 +1,8 @@
 ##### Few scripts for AviSynth+ (for full info read the scripts):
 - AdaptiveGrain - it uses adaptive mask based on frame and pixels brightness to apply grain. More info included in the script.
 - AddBordersMod - due to MPEG-2 subsampling dirty lines / chroma bleeding could appear when AddBorders is used (more visible when the area is very saturared).
+- AnimeMask - port of VapourSynth AnimeMask.
+- AnimeMask2 - port of VapourSynth AnimeMask2.
 - AutoResize_ - intelligent resize/crop to 1080p, 720p, SD (720px wide) or any custom resolution.
 - balanceborders_ - it fixes dirty lines on the borders.
 - bbmod_ - balanceborders mod that using division instead subtraction for the filtering.
