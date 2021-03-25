@@ -29,7 +29,7 @@
 
 
 ### Changelog ###
-# - Make it work in any AVS
+# - Make it work in any AVS, adding keep_tv_range
 # - Assume the input and the output in full range for YUV float.
 # - Initial version.
 
@@ -71,6 +71,6 @@ Function AdaptiveGrain(clip c, clip "grain", float "luma_scaling", bool "mask8",
     """)
     
     show ? last : mt_merge(c, grain, last, luma=luma)
-	show || keep_tv_range ? last : sisVfloat ? Limiter(0.0, 1.0, -0.5, 0.5) : Limiter(paramscale=true)
+	show || !keep_tv_range ? last : sisVfloat ? Limiter(0.0, 1.0, -0.5, 0.5) : Limiter(paramscale=true)
     return last
 }
