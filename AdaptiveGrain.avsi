@@ -5,7 +5,7 @@
 
 ### Usage ###
 ###
-# AdaptiveGrain(clip c, clip "grain", float "luma_scaling", bool "mask8", bool "luma", bool "show", bool "keep_tv_range")
+# AdaptiveGrain(clip c, clip "grain", float "luma_scaling", bool "mask8", bool "luma", bool "show", bool "keep_in_range")
 ###
 ## Parameters ##
 #---------------
@@ -29,18 +29,18 @@
 
 
 ### Changelog ###
-# - Make it work in any AVS, adding keep_tv_range
+# - Make it work in any AVS, adding keep_in_range
 # - Assume the input and the output in full range for YUV float.
 # - Initial version.
 
-Function AdaptiveGrain(clip c, clip "grain", float "luma_scaling", bool "mask8", bool "luma", bool "show", bool "keep_tv_range")
+Function AdaptiveGrain(clip c, clip "grain", float "luma_scaling", bool "mask8", bool "luma", bool "show", bool "keep_in_range")
 {   
     grain = Default(grain, AddGrain(c, 0.25, constant=true))
     show = Default(show, false)
     luma_scaling = Default(luma_scaling, 10.0)
     mask8 = Default(mask8, true)
     luma = Default(luma, false)
-	keep_tv_range = Default(keep_tv_range, true)
+    keep_in_range = Default(keep_in_range, true)
     
     sisavs26 = !(VersionNumber() < 2.60)
     v=VersionString()
@@ -71,6 +71,6 @@ Function AdaptiveGrain(clip c, clip "grain", float "luma_scaling", bool "mask8",
     """)
     
     show ? last : mt_merge(c, grain, last, luma=luma)
-	show || !keep_tv_range ? last : sisVfloat ? Limiter(0.0, 1.0, -0.5, 0.5) : Limiter(paramscale=true)
+    show || !keep_in_range ? last : sisVfloat ? Limiter(0.0, 1.0, -0.5, 0.5) : Limiter(paramscale=true)
     return last
 }
