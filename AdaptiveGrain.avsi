@@ -20,6 +20,10 @@
 # luma (default false): If true the luma mask is used for chroma too.
 #---------------
 # show (default false): If true the output is the mask.
+#---------------
+# keep_in_range (default true): Clipping to valid range.
+# 8..16-bit: valid range is TV range.
+# 32-bit: valid range is 0.0..1.0. 
 
 
 ### Examples ###
@@ -29,8 +33,11 @@
 
 
 ### Changelog ###
+#---------------
 # - Make it work in any AVS, adding keep_in_range
+#---------------
 # - Assume the input and the output in full range for YUV float.
+#---------------
 # - Initial version.
 
 Function AdaptiveGrain(clip c, clip "grain", float "luma_scaling", bool "mask8", bool "luma", bool "show", bool "keep_in_range")
