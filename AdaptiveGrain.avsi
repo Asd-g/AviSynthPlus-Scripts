@@ -10,6 +10,8 @@
 ## Parameters ##
 #---------------
 # clip c: The input clip.
+# Must be in YUV planar format.
+# 32-bit input is assumed full range.
 #---------------
 # clip grain (default AddGrain(c, 0.25, constant=true): The clip on that the grain is applied.
 #---------------
@@ -39,6 +41,7 @@
 # - Assume the input and the output in full range for YUV float.
 #---------------
 # - Initial version.
+
 
 Function AdaptiveGrain(clip c, clip "grain", float "luma_scaling", bool "mask8", bool "luma", bool "show", bool "keep_in_range")
 {   
