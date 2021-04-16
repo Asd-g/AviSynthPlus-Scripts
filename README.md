@@ -24,6 +24,7 @@
 - Prewitt - Prewitt algorithm for edge mask.
 - Rainbow_smooth_ - see the changelog in the script.
 - RoundHalfToEven
+- solarCurve - function similar to Histogram(mode="luma").
 - spline36resizemod_ - Spline36Resize for MPEG-2 chroma placement.
 - SupT - based on https://forum.doom9.org/showpost.php?p=1866983&postcount=7
 - Tonemapper - script for tonemapping.
