@@ -35,7 +35,11 @@ Function Prewitt(clip c, int "thY1", int "thY2", int "thC1", int "thC2", int "y"
     y = Default(y, 3)
     u = Default(u, 1)
     v = Default(v, 1)
+    y2 = y != 3 ? 1 : y
+    u2 = u != 3 ? 1 : u
+    v2 = v != 3 ? 1 : v
     
     c    
-    return mt_lutxy(mt_edge("1 1 1 0 0 0 -1 -1 -1 1", thY1, thY2, thC1, thC2, y, u, v, chroma), mt_edge("1 0 -1 1 0 -1 1 0 -1 1", thY1, thY2, thC1, thC2, y, u, v, chroma), "x 2 ^ y 2 ^ + sqrt", y=y, u=u, v=v, chroma=chroma, use_expr=3)
+    return VersionNumber() < 2.60 ? mt_lutxy(mt_edge("1 1 1 0 0 0 -1 -1 -1 1", thY1, thY2, thC1, thC2, y == 2 ? 2 : y2, u == 2 ? 2 : u2, v == 2 ? 2 : v2, chroma), mt_edge("1 0 -1 1 0 -1 1 0 -1 1", thY1, thY2, thC1, thC2, y2, u2, v2, chroma), "x 2 ^ y 2 ^ + sqrt", y=y, u=u, v=v, chroma=chroma) :
+                                  \ mt_lutxy(mt_edge("1 1 1 0 0 0 -1 -1 -1 1", thY1, thY2, thC1, thC2, y == 2 ? 2 : y2, u == 2 ? 2 : u2, v == 2 ? 2 : v2, chroma), mt_edge("1 0 -1 1 0 -1 1 0 -1 1", thY1, thY2, thC1, thC2, y2, u2, v2, chroma), "x 2 ^ y 2 ^ + sqrt", y=y, u=u, v=v, chroma=chroma, use_expr=1)
 }
