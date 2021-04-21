@@ -23,7 +23,10 @@
 
 
 ### Changelog ###
-# - Initial version.
+#---------------
+# Make it work in any avs and some speed optimization for 8-bit input. (realfinder)
+#---------------
+# Initial version.
 
 
 Function Prewitt(clip c, int "thY1", int "thY2", int "thC1", int "thC2", int "y", int "u", int "v", string "chroma")
