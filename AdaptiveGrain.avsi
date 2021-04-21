@@ -36,7 +36,7 @@
 
 ### Changelog ###
 #---------------
-# - Make it work in any AVS, adding keep_in_range
+# - Make it work in any AVS, adding keep_in_range. (realfinder)
 #---------------
 # - Assume the input and the output in full range for YUV float.
 #---------------
