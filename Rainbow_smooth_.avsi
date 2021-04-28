@@ -33,7 +33,7 @@
 #   - http://forum.doom9.org/showthread.php?p=1025503
 
 
-function rainbow_smootha(clip orig, int "radius", int "lthresh", int "hthresh", val "mask")
+function rainbow_smooth(clip orig, int "radius", int "lthresh", int "hthresh", val "mask")
 {
 ### parameters ###
 radius	= default(radius, 3)
