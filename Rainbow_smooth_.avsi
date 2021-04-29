@@ -1,4 +1,6 @@
 ### Changelog ###
+# Changed to SmoothUV2.
+### ###
 # Changed parameter mask - user mask could be used.
 ### ###
 # Added support for 10..16-bit clips.
@@ -50,10 +52,10 @@ Assert(IsString(mask) || IsClip(mask), "rainbow_smooth: mask must be either clip
 #WORK 	= "x y - 90 > 255 x y - 255 90 / * ?"
 
 ### process ###
-lderain	= (lthresh < 1) ? orig : orig.SmoothUV(radius,lthresh,0)
-#hderain	= orig.SmoothUV(radius,hthresh,0)
+lderain	= (lthresh < 1) ? orig : orig.SmoothUV2(radius,lthresh,0)
+#hderain	= orig.SmoothUV2(radius,hthresh,0)
 
 _mask = (IsString(mask)) ? mt_lutxy(orig.mt_expand(u=1,v=1),orig.mt_inpand(u=1,v=1),(mask == "") ? "x y - 90 > 255 x y - 255 90 / * ?" : mask,u=1,v=1,use_expr=3, scale_inputs="allf") : mask
 
-return (hthresh > lthresh) ? mt_merge(lderain,orig.SmoothUV(radius,hthresh,0),_mask,luma=true,y=2) : lderain
+return (hthresh > lthresh) ? mt_merge(lderain,orig.SmoothUV2(radius,hthresh,0),_mask,luma=true,y=2) : lderain
 }
