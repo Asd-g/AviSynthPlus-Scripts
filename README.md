@@ -22,7 +22,7 @@
 - MCTD_ - see the changelog in the script.
 - Offset_video_ - see the changelog in the script.
 - Prewitt - Prewitt algorithm for edge mask.
-- Rainbow_smooth_ - see the changelog in the script.
+- rainbow_smooth2 - see the changelog in the script.
 - RoundHalfToEven
 - solarCurve - function similar to Histogram(mode="luma").
 - spline36resizemod_ - Spline36Resize for MPEG-2 chroma placement.

@@ -1,5 +1,7 @@
 ### Changelog ###
-# Changed to SmoothUV2.
+# Function name changed to rainbow_smooth2.
+### ###
+# Changed to use SmoothUV2.
 ### ###
 # Changed parameter mask - user mask could be used.
 ### ###
@@ -14,7 +16,7 @@
 # it use smoothuv to for chroma smoothing and reduce the colour-washing with edge masking
 #
 # needed filters:
-#   - SmoothUV2 >=3.0.0
+#   - SmoothUV2 >=4.0.0
 #   - Masktools v2
 #
 # parameter description:
@@ -31,11 +33,11 @@
 #           otherwise it must be clip or string (RPN expression for Expr)
 #
 # links:
-#   - http://avisynth.nl/index.php/SmoothUV
+#   - http://avisynth.nl/index.php/SmoothUV (obsolete)
 #   - http://forum.doom9.org/showthread.php?p=1025503
 
 
-function rainbow_smooth(clip orig, int "radius", int "lthresh", int "hthresh", val "mask")
+function rainbow_smooth2(clip orig, int "radius", int "lthresh", int "hthresh", val "mask")
 {
 ### parameters ###
 radius	= default(radius, 3)
