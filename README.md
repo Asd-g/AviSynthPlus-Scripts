@@ -8,6 +8,7 @@
 - bbmod_ - balanceborders mod that using division instead subtraction for the filtering.
 - bt2390_pq - tone mapping based on BT.2390 (PQ)
 - ChromaShiftSP2_ - high bit depth support.
+- ChubbyRain2_ - high bit depth support.
 - ComparisonGen - it takes images from two videos in order to compare them.
 - debandmask_
 - FFMS2_ - additional parameters for better font styling.
