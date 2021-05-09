@@ -4,7 +4,7 @@
 ### Changelog ###
 #---------------
 # Changed requirements: replaced Cnr2 with vsCnr2.
-# Adde support for 10..16-bit clips.
+# Added support for 10..16-bit clips.
  
 
 function ChubbyRain2(clip c, int "th", int "radius", bool "show", int "sft", bool "interlaced")
