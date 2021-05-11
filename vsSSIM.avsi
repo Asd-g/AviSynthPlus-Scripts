@@ -47,6 +47,13 @@ Ref:
 # y (default true), u (default false), v (default false): Which plane to process.
 
 
+### Changelog ###
+#---------------
+# Changed global scope of ssim_map to local.
+#---------------
+# Initial version.
+
+
 Function vsSSIM(clip clip1, clip clip2, bool "downsample", float "k1", float "k2", float "stddev", float "dynamic_range", bool "show_map", bool "show", bool "y", bool "u", bool "v")
 {
     Assert(PixelType(clip1) == PixelType(clip2), "SSIM: clip1 and clip2 must be of the same format.")
@@ -96,14 +103,14 @@ Function vsSSIM(clip clip1, clip clip2, bool "downsample", float "k1", float "k2
     sigmay2_sq_pls_mu2_sq = vsTCanny(Expr(clip2, "x x *"), sigmay=stddev, mode=-1)
     sigmay12_pls_mu1_mu2 = vsTCanny(Expr(clip1, clip2, "x y *"), sigmay=stddev, mode=-1)
     
-    global ssim_map = c1 > 0.0 && c2 > 0.0 ?
+    ssim_map = c1 > 0.0 && c2 > 0.0 ?
     \ Expr(mu1_mu2, sigmay12_pls_mu1_mu2, mu1_sq, mu2_sq, sigmay1_sq_pls_mu1_sq, mu1_sq, sigmay2_sq_pls_mu2_sq, mu2_sq, "2.0 x * "+ String(c1) +" + 2.0 y x - * "+ String(c2) +" + * z a + "+ String(c1) +" + b c - d e - + "+ String(c2) +" + * /") :
     \ Expr(Expr(mu1_sq, mu2_sq, "x y + "+ String(c1) +" +"), Expr(sigmay1_sq_pls_mu1_sq, mu1_sq, sigmay2_sq_pls_mu2_sq, mu2_sq, "x y - z a - + "+ String(c2) +" +"), mu1_mu2, sigmay12_pls_mu1_mu2, "'x y * 0 > 2 z * "+ String(c1) +" + 2 a z - * "+ String(c2) +" + * x y * / x 0 = not y 0 = and 2 z * "+ String(c1) +" + x / 1.0 ? ?")
     
     show_map = Default(show_map, false)
     last = show_map ?
     \ ScriptClip(ssim_map, """propSet("_PlaneSSIM", AverageLuma(), 0)""") :
-    \ ScriptClip(clip1_src, """propSet("_PlaneSSIM", AverageLuma(ssim_map), 0)""")
+    \ ScriptClip(clip1_src, """propSet("_PlaneSSIM", AverageLuma(ssim_map), 0)""", args="ssim_map")
     
     show = Default(show, true)
     return show ?
