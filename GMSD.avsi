@@ -43,8 +43,12 @@ Ref:
 
 
 ### Changelog ###
-# - Replaced mt_convolution with mt_edge for ~15% speed up.
-# - Initial version.
+#---------------
+# Changed global scope of quality_map to local.
+#---------------
+# Replaced mt_convolution with mt_edge for ~15% speed up.
+#---------------
+# Initial version.
 
 
 Function GMSD(clip clip1, clip clip2, bool "downsample", float "c", bool "show_map", bool "show", bool "y", bool "u", bool "v")
@@ -81,14 +85,14 @@ Function GMSD(clip clip1, clip clip2, bool "downsample", float "c", bool "show_m
     }
     
     c = Default(c, 0.0026)
-    global quality_map = Expr(Expr(mt_edge(clip1, "1 0 -1 1 0 -1 1 0 -1 1", 0, 255), mt_edge(clip1, "1 1 1 0 0 0 -1 -1 -1 1", 0, 255), "x x * y y * +"),
+    quality_map = Expr(Expr(mt_edge(clip1, "1 0 -1 1 0 -1 1 0 -1 1", 0, 255), mt_edge(clip1, "1 1 1 0 0 0 -1 -1 -1 1", 0, 255), "x x * y y * +"),
         \ Expr(mt_edge(clip2, "1 0 -1 1 0 -1 1 0 -1 1", 0, 255), mt_edge(clip2, "1 1 1 0 0 0 -1 -1 -1 1", 0, 255), "x x * y y * +"),
         \ "2 x y * sqrt * "+ String(c) +" + x y + "+ String(c) +" + /")
     
     show_map = Default(show_map, false)
     last = show_map ?
     \ ScriptClip(quality_map, """propSet("_PlaneGMSD", Sqrt(AverageLuma(Expr("x "+ String(AverageLuma()) +" - x "+ String(AverageLuma()) +" - *"))), 0)""") :
-    \ ScriptClip(clip1_src, """propSet("_PlaneGMSD", Sqrt(AverageLuma(Expr(quality_map, "x "+ String(AverageLuma(quality_map)) +" - x "+ String(AverageLuma(quality_map)) +" - *"))), 0)""")
+    \ ScriptClip(clip1_src, """propSet("_PlaneGMSD", Sqrt(AverageLuma(Expr(quality_map, "x "+ String(AverageLuma(quality_map)) +" - x "+ String(AverageLuma(quality_map)) +" - *"))), 0)""", args="quality_map")
     
     show = Default(show, true)
     return show ?
