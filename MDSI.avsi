@@ -41,6 +41,13 @@ Ref:
 # show (default true): Whether to return subtitle with MDSI value.
 
 
+### Changelog ###
+#---------------
+# Changed global scope of gcs to local.
+#---------------
+# Initial version.
+
+
 Function MDSI(clip clip1, clip clip2, int "down_scale", float "alpha", bool "show_maps", bool "show")
 {
     Assert(PixelType(clip1) == PixelType(clip2) && (IsPlanarRGB(clip1) || IsPlanarRGBA(clip1)) , "MDSI: clip1 and clip2 must be in the same format and must be in planar RGB format.")
@@ -52,11 +59,11 @@ Function MDSI(clip clip1, clip clip2, int "down_scale", float "alpha", bool "sho
     
     down_scale = Default(down_scale, 1)
     down1 = down_scale > 1 || BitsPerComponent(clip1) != 32 ?
-    \ z_ConvertFormat(clip1, Int(RoundHalfToEven(Float(Width(clip1)) / down_scale)), Int(RoundHalfToEven(Float(Height(clip1)) / down_scale)), pixel_type="rgbps", resample_filter="bilinear") :
+    \ z_ConvertFormat(clip1, Int(RoundHalfToEven(Float(Width(clip1)) / down_scale)), Int(RoundHalfToEven(Float(Height(clip1)) / down_scale)), pixel_type="rgbps", colorspace_op="rgb=>rgb", resample_filter="bilinear") :
     \ clip1
     
     down2 = down_scale > 1 || BitsPerComponent(clip2) != 32 ?
-    \ z_ConvertFormat(clip2, Int(RoundHalfToEven(Float(Width(clip2)) / down_scale)), Int(RoundHalfToEven(Float(Height(clip2)) / down_scale)), pixel_type="rgbps", resample_filter="bilinear") :
+    \ z_ConvertFormat(clip2, Int(RoundHalfToEven(Float(Width(clip2)) / down_scale)), Int(RoundHalfToEven(Float(Height(clip2)) / down_scale)), pixel_type="rgbps", colorspace_op="rgb=>rgb", resample_filter="bilinear") :
     \ clip2
     
     r1 = ExtractR(down1)
@@ -96,12 +103,12 @@ Function MDSI(clip clip1, clip clip2, int "down_scale", float "alpha", bool "sho
     cs = Expr(h1, h2, m1, m2, "x y * z a * + 2 * "+ String(c3) +" + x x * y y * + z z * + a a * + "+ String(c3) +" + /")
     
     alpha = Default(alpha, 0.6)
-    global gcs = Expr(gs_hvs, cs, "x "+ String(alpha) +" * y 1.0 "+ String(alpha) +" - * + 0.0 max 1.0 min 0.25 pow")
+    gcs = Expr(gs_hvs, cs, "x "+ String(alpha) +" * y 1.0 "+ String(alpha) +" - * + 0.0 max 1.0 min 0.25 pow")
     
     show_maps = Default(show_maps, false)
     last = show_maps ?
-    \ ScriptClip(Interleave(gs_hvs, cs, gcs), """propSet("_FrameMDSI", pow(AverageLuma(Expr(gcs, "x "+ String(AverageLuma(gcs)) +" - abs")), 0.25), 0)""") :
-    \ ScriptClip(clip1, """propSet("_FrameMDSI", pow(AverageLuma(Expr(gcs, "x "+ String(AverageLuma(gcs)) +" - abs")), 0.25), 0)""")
+    \ ScriptClip(Interleave(gs_hvs, cs, gcs), """propSet("_FrameMDSI", pow(AverageLuma(Expr(gcs, "x "+ String(AverageLuma(gcs)) +" - abs")), 0.25), 0)""", args="gcs") :
+    \ ScriptClip(clip1, """propSet("_FrameMDSI", pow(AverageLuma(Expr(gcs, "x "+ String(AverageLuma(gcs)) +" - abs")), 0.25), 0)""", args="gcs")
     
     show = Default(show, true)
     return show ?
