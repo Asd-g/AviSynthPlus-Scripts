@@ -117,10 +117,11 @@ Function _static(clip c, int "mdmaxl", int "tdmaxl", float "mdminl", float "tdmi
     {
         temp_dir = RT_GetSystemEnv("temp") + "\" + "_stats.txt"
         
-        FrameEvaluate(c, """
-            if (_max) { RT_TxtWriteFile((propGetType("MasteringDisplayMaxLuminance")) > 0 ? String(propGetFloat("MasteringDisplayMaxLuminance")) : "1000.0", temp_dir) }
-            if (_min) { RT_TxtWriteFile((propGetType("MasteringDisplayMinLuminance")) > 0 ? String(propGetFloat("MasteringDisplayMinLuminance")) : "0.005", temp_dir, true) }
-        """, args="temp_dir, _min, _max")
+        FrameEvaluate(c, function [temp_dir, _min, _max] ()
+            {
+                if (_max) { RT_TxtWriteFile((propGetType("MasteringDisplayMaxLuminance")) > 0 ? String(propGetFloat("MasteringDisplayMaxLuminance")) : "1000.0", temp_dir) }
+                if (_min) { RT_TxtWriteFile((propGetType("MasteringDisplayMinLuminance")) > 0 ? String(propGetFloat("MasteringDisplayMinLuminance")) : "0.005", temp_dir, true) }
+            })
         RT_AverageLuma(n=0, w=1, h=1)
         
         mdmaxl = _max ? Value(RT_ReadTxtFromFile(temp_dir, 1, 0)) : mdmaxl
@@ -137,7 +138,7 @@ Function _static(clip c, int "mdmaxl", int "tdmaxl", float "mdminl", float "tdmi
     
     _common(c, mdmaxl, tdmaxl, mdminl, tdminl, _cs, cs_weight, use_alternate, output8, colors, colors_weight, gain, gain_factor)
     
-    if (_min || _max) { ScriptClip(""" CallCmd(close="cmd /c del " + temp_dir, hide=true) """, args="temp_dir") }
+    if (_min || _max) { ScriptClip(function [temp_dir] () { CallCmd(close="cmd /c del " + temp_dir, hide=true)  }) }
     
     return last
 }
@@ -145,23 +146,23 @@ Function _static(clip c, int "mdmaxl", int "tdmaxl", float "mdminl", float "tdmi
 Function _dynamic(clip c, int "mdmaxl", int "tdmaxl", float "mdminl", float "tdminl", bool "_cs", float "cs_weight", bool "use_alternate", bool "output8", int "colors", float "colors_weight", bool "gain", int "gain_factor")
 {
     ScriptClip((output8) ? z_ConvertFormat(c, pixel_type="yv12", resample_filter_uv="spline36", chromaloc_op="top_left=>left", dither_type="error_diffusion") :
-    \ z_ConvertFormat(c, pixel_type="yuv444p16", chromaloc_op="top_left=>top_left", resample_filter_uv="spline36"), """
-        
-        mdmaxl = Default(mdmaxl, (propGetType("MasteringDisplayMaxLuminance") > 0) ? propGetFloat("MasteringDisplayMaxLuminance") : 1000.0)
-        mdminl = Default(mdminl, (propGetType("MasteringDisplayMinLuminance") > 0) ? propGetFloat("MasteringDisplayMinLuminance") : 0.005)
-        
-        _lin = z_ConvertFormat(c, pixel_type="rgbps", colorspace_op="2020:st2084=>rgb:linear", resample_filter_uv="spline36", chromaloc_op="top_left=>top_left", nominal_luminance=mdmaxl)
-        peak_nits = 0.2627 * RPlaneMax(_lin) + 0.678 * GPlaneMax(_lin) + 0.0593 * BPlaneMax(_lin)
-        tdmaxl = min(pow((Defined(tdmaxl)) ? tdmaxl : 200.0, 1 + 1 / (peak_nits / (0.2627 * AverageR(_lin) + 0.678 * AverageG(_lin) + 0.0593 * AverageB(_lin)))), mdmaxl / 1.4)
-        tdminl = Default(tdminl, mdminl)
-        gain_factor = (gain) ? Default(gain_factor, (peak_nits) < 0.1 ? 0 : max(2, Int(RoundHalfToEven(0.8 / peak_nits)))) : 0
-        
-        Assert(tdmaxl < mdmaxl, "bt2390_pq: tdmaxl must be less than mdmaxl.")
-        Assert(tdminl >= mdminl, "bt2390_pq: tdminl must be equal or greater than mdminl.")
-        Assert(gain_factor >= 0, "bt2390_pq: gain_factor must be equal to or greater than 0.")
-  
-        return _common(c, mdmaxl, tdmaxl, mdminl, tdminl, _cs, cs_weight, use_alternate, output8, colors, colors_weight, gain, gain_factor)
-    """, args="c, mdmaxl, tdmaxl, mdminl, tdminl, _cs, cs_weight, use_alternate, output8, colors, colors_weight, gain, gain_factor")
+    \ z_ConvertFormat(c, pixel_type="yuv444p16", chromaloc_op="top_left=>top_left", resample_filter_uv="spline36"), function [c, mdmaxl, tdmaxl, mdminl, tdminl, _cs, cs_weight, use_alternate, output8, colors, colors_weight, gain, gain_factor] ()
+        {
+            mdmaxl = Default(mdmaxl, (propGetType("MasteringDisplayMaxLuminance") > 0) ? propGetFloat("MasteringDisplayMaxLuminance") : 1000.0)
+            mdminl = Default(mdminl, (propGetType("MasteringDisplayMinLuminance") > 0) ? propGetFloat("MasteringDisplayMinLuminance") : 0.005)
+            
+            _lin = z_ConvertFormat(c, pixel_type="rgbps", colorspace_op="2020:st2084=>rgb:linear", resample_filter_uv="spline36", chromaloc_op="top_left=>top_left", nominal_luminance=mdmaxl)
+            peak_nits = 0.2627 * RPlaneMax(_lin) + 0.678 * GPlaneMax(_lin) + 0.0593 * BPlaneMax(_lin)
+            tdmaxl = min(pow((Defined(tdmaxl)) ? tdmaxl : 200.0, 1 + 1 / (peak_nits / (0.2627 * AverageR(_lin) + 0.678 * AverageG(_lin) + 0.0593 * AverageB(_lin)))), mdmaxl / 1.4)
+            tdminl = Default(tdminl, mdminl)
+            gain_factor = (gain) ? Default(gain_factor, (peak_nits) < 0.1 ? 0 : max(2, Int(RoundHalfToEven(0.8 / peak_nits)))) : 0
+            
+            Assert(tdmaxl < mdmaxl, "bt2390_pq: tdmaxl must be less than mdmaxl.")
+            Assert(tdminl >= mdminl, "bt2390_pq: tdminl must be equal or greater than mdminl.")
+            Assert(gain_factor >= 0, "bt2390_pq: gain_factor must be equal to or greater than 0.")
+            
+            return _common(c, mdmaxl, tdmaxl, mdminl, tdminl, _cs, cs_weight, use_alternate, output8, colors, colors_weight, gain, gain_factor)
+        })
 }
 
 Function _common(clip c, val "mdmaxl", val "tdmaxl", float "mdminl", float "tdminl", bool "_cs", float "cs_weight", bool "use_alternate", bool "output8", int "colors", float "colors_weight", bool "gain", int "gain_factor")

@@ -92,7 +92,10 @@ Function GMSD(clip clip1, clip clip2, bool "downsample", float "c", bool "show_m
     show_map = Default(show_map, false)
     last = show_map ?
     \ ScriptClip(quality_map, """propSet("_PlaneGMSD", Sqrt(AverageLuma(Expr("x "+ String(AverageLuma()) +" - x "+ String(AverageLuma()) +" - *"))), 0)""") :
-    \ ScriptClip(clip1_src, """propSet("_PlaneGMSD", Sqrt(AverageLuma(Expr(quality_map, "x "+ String(AverageLuma(quality_map)) +" - x "+ String(AverageLuma(quality_map)) +" - *"))), 0)""", args="quality_map")
+    \ ScriptClip(clip1_src, function [quality_map] ()
+        {
+            propSet("_PlaneGMSD", Sqrt(AverageLuma(Expr(quality_map, "x "+ String(AverageLuma(quality_map)) +" - x "+ String(AverageLuma(quality_map)) +" - *"))), 0)
+        })
     
     show = Default(show, true)
     return show ?

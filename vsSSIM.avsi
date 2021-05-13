@@ -110,7 +110,10 @@ Function vsSSIM(clip clip1, clip clip2, bool "downsample", float "k1", float "k2
     show_map = Default(show_map, false)
     last = show_map ?
     \ ScriptClip(ssim_map, """propSet("_PlaneSSIM", AverageLuma(), 0)""") :
-    \ ScriptClip(clip1_src, """propSet("_PlaneSSIM", AverageLuma(ssim_map), 0)""", args="ssim_map")
+    \ ScriptClip(clip1_src, function [ssim_map] ()
+        {
+            propSet("_PlaneSSIM", AverageLuma(ssim_map), 0)
+        })
     
     show = Default(show, true)
     return show ?

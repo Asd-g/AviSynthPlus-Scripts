@@ -273,44 +273,45 @@ Function _selectframes(val c, int framenum)
 
 Function _fwsingle(val c, string _filedir, val frame_types, int _framen)
 {
-    FrameEvaluate(c[0], """
-        sI = (((IsInt(frame_types[0]) && frame_types[0] == 1) || (IsString(frame_types[0]) && lcase(frame_types[0]) == "i")) && (String(propGetString("_PictType")) == "I")) ? true : false
-        sP = (((IsInt(frame_types[0]) && frame_types[0] == 2) || (IsString(frame_types[0]) && lcase(frame_types[0]) == "p")) && (String(propGetString("_PictType")) == "P")) ? true : false
-        sB = (((IsInt(frame_types[0]) && frame_types[0] == 3) || (IsString(frame_types[0]) && lcase(frame_types[0]) == "b")) && (String(propGetString("_PictType")) == "B")) ? true : false
-        sPB = (((IsInt(frame_types[0]) && frame_types[0] == 4) || (IsString(frame_types[0]) && lcase(frame_types[0]) == "pb")) && (String(propGetString("_PictType")) == "P" || String(propGetString("_PictType")) == "B")) ? true : false
-    
-        if (sI || sP || sB || sPB)
+    FrameEvaluate(c[0], function [c, _filedir, frame_types, _framen] ()
         {
-            check = 1
-                            
-            for (j = 1, ArraySize(c) - 1)
+            sI = (((IsInt(frame_types[0]) && frame_types[0] == 1) || (IsString(frame_types[0]) && lcase(frame_types[0]) == "i")) && (String(propGetString("_PictType")) == "I")) ? true : false
+            sP = (((IsInt(frame_types[0]) && frame_types[0] == 2) || (IsString(frame_types[0]) && lcase(frame_types[0]) == "p")) && (String(propGetString("_PictType")) == "P")) ? true : false
+            sB = (((IsInt(frame_types[0]) && frame_types[0] == 3) || (IsString(frame_types[0]) && lcase(frame_types[0]) == "b")) && (String(propGetString("_PictType")) == "B")) ? true : false
+            sPB = (((IsInt(frame_types[0]) && frame_types[0] == 4) || (IsString(frame_types[0]) && lcase(frame_types[0]) == "pb")) && (String(propGetString("_PictType")) == "P" || String(propGetString("_PictType")) == "B")) ? true : false
+            
+            if (sI || sP || sB || sPB)
             {
-                c[j]
-                eI = (((IsInt(frame_types[j]) && frame_types[j] == 1) || (IsString(frame_types[j]) && lcase(frame_types[j]) == "i")) && (String(propGetString("_PictType")) == "I")) ? true : false
-                eP = (((IsInt(frame_types[j]) && frame_types[j] == 2) || (IsString(frame_types[j]) && lcase(frame_types[j]) == "p")) && (String(propGetString("_PictType")) == "P")) ? true : false
-                eB = (((IsInt(frame_types[j]) && frame_types[j] == 3) || (IsString(frame_types[j]) && lcase(frame_types[j]) == "b")) && (String(propGetString("_PictType")) == "B")) ? true : false
-                ePB = (((IsInt(frame_types[j]) && frame_types[j] == 4) || (IsString(frame_types[j]) && lcase(frame_types[j]) == "pb")) && (String(propGetString("_PictType")) == "P" || String(propGetString("_PictType")) == "B")) ? true : false
-                
-                if (eI || eP || eB || ePB)
+                check = 1
+                                
+                for (j = 1, ArraySize(c) - 1)
                 {
-                    check = check + j
+                    c[j]
+                    eI = (((IsInt(frame_types[j]) && frame_types[j] == 1) || (IsString(frame_types[j]) && lcase(frame_types[j]) == "i")) && (String(propGetString("_PictType")) == "I")) ? true : false
+                    eP = (((IsInt(frame_types[j]) && frame_types[j] == 2) || (IsString(frame_types[j]) && lcase(frame_types[j]) == "p")) && (String(propGetString("_PictType")) == "P")) ? true : false
+                    eB = (((IsInt(frame_types[j]) && frame_types[j] == 3) || (IsString(frame_types[j]) && lcase(frame_types[j]) == "b")) && (String(propGetString("_PictType")) == "B")) ? true : false
+                    ePB = (((IsInt(frame_types[j]) && frame_types[j] == 4) || (IsString(frame_types[j]) && lcase(frame_types[j]) == "pb")) && (String(propGetString("_PictType")) == "P" || String(propGetString("_PictType")) == "B")) ? true : false
+                    
+                    if (eI || eP || eB || ePB)
+                    {
+                        check = check + j
+                    }
                 }
-            }
-
-            if ((check == 2 && ArraySize(c) == 2) || (check == 4 && ArraySize(c) == 3) || (check == 7 && ArraySize(c) == 4) || (check == 11 && ArraySize(c) == 5))
-            {
-                RT_WriteFile(_filedir + "_forsave.txt", "%i", _framen)
+            
+                if ((check == 2 && ArraySize(c) == 2) || (check == 4 && ArraySize(c) == 3) || (check == 7 && ArraySize(c) == 4) || (check == 11 && ArraySize(c) == 5))
+                {
+                    RT_WriteFile(_filedir + "_forsave.txt", "%i", _framen)
+                }
+                else
+                {
+                    RT_WriteFile(_filedir + "_notmatiching.txt", "%i", _framen)
+                }
             }
             else
             {
                 RT_WriteFile(_filedir + "_notmatiching.txt", "%i", _framen)
             }
-        }
-        else
-        {
-            RT_WriteFile(_filedir + "_notmatiching.txt", "%i", _framen)
-        }
-        """, args="c, _filedir, frame_types, _framen", after_frame=true)
+        }, after_frame=true)
             
     RT_AverageLuma(n=_framen, w=1, h=1)
 }

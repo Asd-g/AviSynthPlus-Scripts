@@ -106,9 +106,14 @@ Function MDSI(clip clip1, clip clip2, int "down_scale", float "alpha", bool "sho
     gcs = Expr(gs_hvs, cs, "x "+ String(alpha) +" * y 1.0 "+ String(alpha) +" - * + 0.0 max 1.0 min 0.25 pow")
     
     show_maps = Default(show_maps, false)
-    last = show_maps ?
-    \ ScriptClip(Interleave(gs_hvs, cs, gcs), """propSet("_FrameMDSI", pow(AverageLuma(Expr(gcs, "x "+ String(AverageLuma(gcs)) +" - abs")), 0.25), 0)""", args="gcs") :
-    \ ScriptClip(clip1, """propSet("_FrameMDSI", pow(AverageLuma(Expr(gcs, "x "+ String(AverageLuma(gcs)) +" - abs")), 0.25), 0)""", args="gcs")
+    last = show_maps ? ScriptClip(Interleave(gs_hvs, cs, gcs), function [gcs] ()
+        {
+        propSet("_FrameMDSI", pow(AverageLuma(Expr(gcs, "x "+ String(AverageLuma(gcs)) +" - abs")), 0.25), 0)
+        }) :
+    \ ScriptClip(clip1, function [gcs] ()
+        {
+            propSet("_FrameMDSI", pow(AverageLuma(Expr(gcs, "x "+ String(AverageLuma(gcs)) +" - abs")), 0.25), 0)
+        })
     
     show = Default(show, true)
     return show ?

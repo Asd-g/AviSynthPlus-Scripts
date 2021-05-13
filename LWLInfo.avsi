@@ -1,5 +1,5 @@
 /*
-Script displaying LSMASHSource/FFMS2/D2VSource frame properties.
+Script displaying LSMASHSource/FFMS2/D2VSource... frame properties.
 
 The list below shows what the frame properties values corresponds to:
 
@@ -164,41 +164,44 @@ Function LWLInfo(
     x = Default(x, Defined(align) ? (align == 1 || align == 4 || align == 7) ? 8 : (align == 2 || align == 5 || align == 8) ? -1 : (align == 3 || align == 6 || align == 9) ? width(c) - 8 : NOP() : 8)
     y = Default(y, Defined(align) ? (align == 4 || align == 5 || align == 6) ? size : (align == 7 || align == 8 || align == 9) ? 0 : (align == 1 || align == 2 || align == 3) ? height(c) - 1 : NOP() : 0)
     
-    ScriptClip(c, """ temp_prop = ""
-    if (framenum) { temp_prop = temp_prop + "Frame Number: " + String(current_frame) + " of " + String(FrameCount()) + "\n" }
-    if (picturetype) { if (propGetType("_PictType") > 0) { temp_prop = temp_prop + "Picture Type: " + String(propGetString("_PictType")) + "\n" } }
-    if (durationnum) { if (propGetType("_DurationNum") > 0) { temp_prop = temp_prop + "Duration Numerator: " + String(propGetInt("_DurationNum")) + "\n" } }
-    if (durationden) { if (propGetType("_DurationDen") > 0) { temp_prop = temp_prop + "Duration Denominator: " + String(propGetInt("_DurationDen")) + "\n" } }
+    ScriptClip(c, function [framenum, sarnum, sarden, durationnum, durationden, absolutetime, colorrange, primaries, transfer, matrix, chromalocation, picturetype, fieldbased, masteringdisplayprimariesx, masteringdisplayprimariesy, masteringdisplaywhitepointx, masteringdisplaywhitepointy, masteringdisplayminluminance, masteringdisplaymaxluminance, contentlightlevelmax, contentlightlevelaverage, aspectratio, gopnumber, gopposition, gopclosed, encodedframetop, encodedframebottom, quantsavg, quantsmin, quantsmax, font, size, textcolor, halocolor, align, spc, lsp, fontwidth, fontangle, x, y] ()
+        {
+            temp_prop = ""
+            if (framenum) { temp_prop = temp_prop + "Frame Number: " + String(current_frame) + " of " + String(FrameCount()) + "\n" }
+            if (picturetype) { if (propGetType("_PictType") > 0) { temp_prop = temp_prop + "Picture Type: " + String(propGetString("_PictType")) + "\n" } }
+            if (durationnum) { if (propGetType("_DurationNum") > 0) { temp_prop = temp_prop + "Duration Numerator: " + String(propGetInt("_DurationNum")) + "\n" } }
+            if (durationden) { if (propGetType("_DurationDen") > 0) { temp_prop = temp_prop + "Duration Denominator: " + String(propGetInt("_DurationDen")) + "\n" } }
+            
+            if (absolutetime) { if (propGetType("_AbsoluteTime") > 0) { temp_prop = temp_prop + "Absolute Time: " + String(propGetFloat("_AbsoluteTime")) + "\n" } }
+            
+            if (colorrange) { if (propGetType("_ColorRange") > 0) { temp_prop = temp_prop + "Color Range: " + String(propGetInt("_ColorRange")) + "\n" } }
+            if (primaries) { if (propGetType("_Primaries") > 0) { temp_prop = temp_prop + "Primaries: " + String(propGetInt("_Primaries")) + "\n" } }
+            if (transfer) { if (propGetType("_Transfer") > 0) { temp_prop = temp_prop + "Transfer: " + String(propGetInt("_Transfer")) + "\n" } }
+            if (matrix) { if (propGetType("_Matrix") > 0) { temp_prop = temp_prop + "Matrix: " + String(propGetInt("_Matrix")) + "\n" } }
+            if (chromalocation) { if (propGetType("_ChromaLocation") > 0) { temp_prop = temp_prop + "Chroma Location: " + String(propGetInt("_ChromaLocation")) + "\n" } }    
+            if (fieldbased) { if (propGetType("_FieldBased") > 0) { temp_prop = temp_prop + "Field Based: " + String(propGetInt("_FieldBased")) + "\n" } }
+            if (sarnum) { if (propGetType("_SARNum") > 0) { temp_prop = temp_prop + "SAR Numerator: " + String(propGetInt("_SARNum")) + "\n" } }
+            if (sarden) { if (propGetType("_SARDen") > 0) { temp_prop = temp_prop + "SAR Denominator: " + String(propGetInt("_SARDen")) + "\n" } }
+            if (masteringdisplayprimariesx) { if (propGetType("MasteringDisplayPrimariesX") > 0) { temp_prop = temp_prop + "Mastering Display Primaries X: " + String(propGetAsArray("MasteringDisplayPrimariesX")[0]) + " " + String(propGetAsArray("MasteringDisplayPrimariesX")[1]) + " " + String(propGetAsArray("MasteringDisplayPrimariesX")[2]) + "\n" } }
+            if (masteringdisplayprimariesy) { if (propGetType("MasteringDisplayPrimariesY") > 0) { temp_prop = temp_prop + "Mastering Display Primaries Y: " + String(propGetAsArray("MasteringDisplayPrimariesY")[0]) + " " + String(propGetAsArray("MasteringDisplayPrimariesY")[1]) + " " + String(propGetAsArray("MasteringDisplayPrimariesY")[2]) + "\n" } }
+            if (masteringdisplaywhitepointx) { if (propGetType("MasteringDisplayWhitePointX") > 0) { temp_prop = temp_prop + "Mastering Display WhitePoint X: " + String(propGetFloat("MasteringDisplayWhitePointX")) + "\n" } }
+            if (masteringdisplaywhitepointy) { if (propGetType("MasteringDisplayWhitePointY") > 0) { temp_prop = temp_prop + "Mastering Display White Point Y: " + String(propGetFloat("MasteringDisplayWhitePointY")) + "\n" } }
+            if (masteringdisplayminluminance) { if (propGetType("MasteringDisplayMinLuminance") > 0) { temp_prop = temp_prop + "Mastering Display Min Luminance: " + String(propGetFloat("MasteringDisplayMinLuminance")) + "\n" } }
+            if (masteringdisplaymaxluminance) {  if (propGetType("MasteringDisplayMaxLuminance") > 0) { temp_prop = temp_prop + "Mastering Display Max Luminance: " + String(propGetFloat("MasteringDisplayMaxLuminance")) + "\n" } }
+            if (contentlightlevelmax) { if (propGetType("ContentLightLevelMax") > 0) { temp_prop = temp_prop + "Content LightLevel Max: " + String(propGetAny("ContentLightLevelMax")) + "\n" } }
+            if (contentlightlevelaverage) { if (propGetType("ContentLightLevelAverage") > 0) { temp_prop = temp_prop + "Content Light Level Average: " + String(propGetAny("ContentLightLevelAverage")) + "\n" } }    
+            
+            if (aspectratio) { if (propGetType("_AspectRatio") > 0) { temp_prop = temp_prop + "Aspect Ratio: " + String(propGetString("_AspectRatio")) + "\n" } }
+            if (gopnumber) { if (propGetType("_GOPNumber") > 0) { temp_prop = temp_prop + "GOP Number: " + String(propGetAsArray("_GOPNumber")[0]) + " (" + String(propGetAsArray("_GOPNumber")[1]) + ")" + "\n" } }
+            if (gopposition) { if (propGetType("_GOPPosition") > 0) { temp_prop = temp_prop + "GOP Position: " + String(propGetInt("_GOPPosition")) + "\n" } }
+            if (gopclosed) { if (propGetType("_GOPClosed") > 0) { temp_prop = temp_prop + "GOP Closed: " + String(propGetInt("_GOPClosed")) + "\n" } }
+            if (encodedframetop) { if (propGetType("_EncodedFrameTop") > 0) { temp_prop = temp_prop + "Encoded Frame Top: " + String(propGetInt("_EncodedFrameTop")) + "\n" } }
+            if (encodedframebottom) { if (propGetType("_EncodedFrameBottom") > 0) { temp_prop = temp_prop + "Encoded Frame Bottom: " + String(propGetInt("_EncodedFrameBottom")) + "\n" } }
+            if (quantsavg) { if (propGetType("_QuantsAverage") > 0) { temp_prop = temp_prop + "Quants Average: " + String(propGetInt("_QuantsAverage")) + "\n" } }
+            if (quantsmin) { if (propGetType("_QuantsMin") > 0) { temp_prop = temp_prop + "Quants Min: " + String(propGetInt("_QuantsMin")) + "\n" } }
+            if (quantsmax) { if (propGetType("_QuantsMax") > 0) { temp_prop = temp_prop + "Quants Max: " + String(propGetInt("_QuantsMax")) + "\n" } }
     
-    if (absolutetime) { if (propGetType("_AbsoluteTime") > 0) { temp_prop = temp_prop + "Absolute Time: " + String(propGetFloat("_AbsoluteTime")) + "\n" } }
-    
-    if (colorrange) { if (propGetType("_ColorRange") > 0) { temp_prop = temp_prop + "Color Range: " + String(propGetInt("_ColorRange")) + "\n" } }
-    if (primaries) { if (propGetType("_Primaries") > 0) { temp_prop = temp_prop + "Primaries: " + String(propGetInt("_Primaries")) + "\n" } }
-    if (transfer) { if (propGetType("_Transfer") > 0) { temp_prop = temp_prop + "Transfer: " + String(propGetInt("_Transfer")) + "\n" } }
-    if (matrix) { if (propGetType("_Matrix") > 0) { temp_prop = temp_prop + "Matrix: " + String(propGetInt("_Matrix")) + "\n" } }
-    if (chromalocation) { if (propGetType("_ChromaLocation") > 0) { temp_prop = temp_prop + "Chroma Location: " + String(propGetInt("_ChromaLocation")) + "\n" } }    
-    if (fieldbased) { if (propGetType("_FieldBased") > 0) { temp_prop = temp_prop + "Field Based: " + String(propGetInt("_FieldBased")) + "\n" } }
-    if (sarnum) { if (propGetType("_SARNum") > 0) { temp_prop = temp_prop + "SAR Numerator: " + String(propGetInt("_SARNum")) + "\n" } }
-    if (sarden) { if (propGetType("_SARDen") > 0) { temp_prop = temp_prop + "SAR Denominator: " + String(propGetInt("_SARDen")) + "\n" } }
-    if (masteringdisplayprimariesx) { if (propGetType("MasteringDisplayPrimariesX") > 0) { temp_prop = temp_prop + "Mastering Display Primaries X: " + String(propGetAsArray("MasteringDisplayPrimariesX")[0]) + " " + String(propGetAsArray("MasteringDisplayPrimariesX")[1]) + " " + String(propGetAsArray("MasteringDisplayPrimariesX")[2]) + "\n" } }
-    if (masteringdisplayprimariesy) { if (propGetType("MasteringDisplayPrimariesY") > 0) { temp_prop = temp_prop + "Mastering Display Primaries Y: " + String(propGetAsArray("MasteringDisplayPrimariesY")[0]) + " " + String(propGetAsArray("MasteringDisplayPrimariesY")[1]) + " " + String(propGetAsArray("MasteringDisplayPrimariesY")[2]) + "\n" } }
-    if (masteringdisplaywhitepointx) { if (propGetType("MasteringDisplayWhitePointX") > 0) { temp_prop = temp_prop + "Mastering Display WhitePoint X: " + String(propGetFloat("MasteringDisplayWhitePointX")) + "\n" } }
-    if (masteringdisplaywhitepointy) { if (propGetType("MasteringDisplayWhitePointY") > 0) { temp_prop = temp_prop + "Mastering Display White Point Y: " + String(propGetFloat("MasteringDisplayWhitePointY")) + "\n" } }
-    if (masteringdisplayminluminance) { if (propGetType("MasteringDisplayMinLuminance") > 0) { temp_prop = temp_prop + "Mastering Display Min Luminance: " + String(propGetFloat("MasteringDisplayMinLuminance")) + "\n" } }
-    if (masteringdisplaymaxluminance) {  if (propGetType("MasteringDisplayMaxLuminance") > 0) { temp_prop = temp_prop + "Mastering Display Max Luminance: " + String(propGetFloat("MasteringDisplayMaxLuminance")) + "\n" } }
-    if (contentlightlevelmax) { if (propGetType("ContentLightLevelMax") > 0) { temp_prop = temp_prop + "Content LightLevel Max: " + String(propGetAny("ContentLightLevelMax")) + "\n" } }
-    if (contentlightlevelaverage) { if (propGetType("ContentLightLevelAverage") > 0) { temp_prop = temp_prop + "Content Light Level Average: " + String(propGetAny("ContentLightLevelAverage")) + "\n" } }    
-    
-    if (aspectratio) { if (propGetType("_AspectRatio") > 0) { temp_prop = temp_prop + "Aspect Ratio: " + String(propGetString("_AspectRatio")) + "\n" } }
-    if (gopnumber) { if (propGetType("_GOPNumber") > 0) { temp_prop = temp_prop + "GOP Number: " + String(propGetAsArray("_GOPNumber")[0]) + " (" + String(propGetAsArray("_GOPNumber")[1]) + ")" + "\n" } }
-    if (gopposition) { if (propGetType("_GOPPosition") > 0) { temp_prop = temp_prop + "GOP Position: " + String(propGetInt("_GOPPosition")) + "\n" } }
-    if (gopclosed) { if (propGetType("_GOPClosed") > 0) { temp_prop = temp_prop + "GOP Closed: " + String(propGetInt("_GOPClosed")) + "\n" } }
-    if (encodedframetop) { if (propGetType("_EncodedFrameTop") > 0) { temp_prop = temp_prop + "Encoded Frame Top: " + String(propGetInt("_EncodedFrameTop")) + "\n" } }
-    if (encodedframebottom) { if (propGetType("_EncodedFrameBottom") > 0) { temp_prop = temp_prop + "Encoded Frame Bottom: " + String(propGetInt("_EncodedFrameBottom")) + "\n" } }
-    if (quantsavg) { if (propGetType("_QuantsAverage") > 0) { temp_prop = temp_prop + "Quants Average: " + String(propGetInt("_QuantsAverage")) + "\n" } }
-    if (quantsmin) { if (propGetType("_QuantsMin") > 0) { temp_prop = temp_prop + "Quants Min: " + String(propGetInt("_QuantsMin")) + "\n" } }
-    if (quantsmax) { if (propGetType("_QuantsMax") > 0) { temp_prop = temp_prop + "Quants Max: " + String(propGetInt("_QuantsMax")) + "\n" } }
-    
-    return Subtitle(temp_prop, x=x, y=y, font=font, size=size, text_color=textcolor, halo_color=halocolor, align=align, spc=spc, lsp=lsp, font_width=fontwidth, font_angle=fontangle)""", after_frame=true, args="framenum, sarnum, sarden, durationnum, durationden, absolutetime, colorrange, primaries, transfer, matrix, chromalocation, picturetype, fieldbased, masteringdisplayprimariesx, masteringdisplayprimariesy, masteringdisplaywhitepointx, masteringdisplaywhitepointy, masteringdisplayminluminance, masteringdisplaymaxluminance, contentlightlevelmax, contentlightlevelaverage, aspectratio, gopnumber, gopposition, gopclosed, encodedframetop, encodedframebottom, quantsavg, quantsmin, quantsmax, font, size, textcolor, halocolor, align, spc, lsp, fontwidth, fontangle, x, y")
+            return Subtitle(temp_prop, x=x, y=y, font=font, size=size, text_color=textcolor, halo_color=halocolor, align=align, spc=spc, lsp=lsp, font_width=fontwidth, font_angle=fontangle)
+        }, after_frame=true)
 }
     
