@@ -116,6 +116,8 @@ Note - if AvsPmod is used and default s_image_file and e_image_file are used, th
 
 ### Changelog ###
 #---------------
+# Replaced FrameEvalute with ScriptClip because the former doesn't like function objects.
+#---------------
 # Added parameter check_type.
 # If frame is not correct type, next frame will be checked until correct type is found.
 # Removed parameter frames_file.
@@ -273,7 +275,7 @@ Function _selectframes(val c, int framenum)
 
 Function _fwsingle(val c, string _filedir, val frame_types, int _framen)
 {
-    FrameEvaluate(c[0], function [c, _filedir, frame_types, _framen] ()
+    ScriptClip(c[0], function [c, _filedir, frame_types, _framen] ()
         {
             sI = (((IsInt(frame_types[0]) && frame_types[0] == 1) || (IsString(frame_types[0]) && lcase(frame_types[0]) == "i")) && (String(propGetString("_PictType")) == "I")) ? true : false
             sP = (((IsInt(frame_types[0]) && frame_types[0] == 2) || (IsString(frame_types[0]) && lcase(frame_types[0]) == "p")) && (String(propGetString("_PictType")) == "P")) ? true : false

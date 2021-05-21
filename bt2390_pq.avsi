@@ -87,7 +87,7 @@ It's recommended the video to be cropped for peak_compute=true. The black bars m
 
 ### Changelog ###
 #---------------
-# Replace FrameEvalute with ScriptClip because the former doesn't like function objects.
+# Replaced FrameEvalute with ScriptClip because the former doesn't like function objects.
 #---------------
 # Added parameters colors, colors_weight, gain, gain_factor.
 #---------------
