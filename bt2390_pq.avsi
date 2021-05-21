@@ -87,6 +87,8 @@ It's recommended the video to be cropped for peak_compute=true. The black bars m
 
 ### Changelog ###
 #---------------
+# Replace FrameEvalute with ScriptClip because the former doesn't like function objects.
+#---------------
 # Added parameters colors, colors_weight, gain, gain_factor.
 #---------------
 # Initial version.
@@ -117,7 +119,7 @@ Function _static(clip c, int "mdmaxl", int "tdmaxl", float "mdminl", float "tdmi
     {
         temp_dir = RT_GetSystemEnv("temp") + "\" + "_stats.txt"
         
-        FrameEvaluate(c, function [temp_dir, _min, _max] ()
+        ScriptClip(c, function [temp_dir, _min, _max] ()
             {
                 if (_max) { RT_TxtWriteFile((propGetType("MasteringDisplayMaxLuminance")) > 0 ? String(propGetFloat("MasteringDisplayMaxLuminance")) : "1000.0", temp_dir) }
                 if (_min) { RT_TxtWriteFile((propGetType("MasteringDisplayMinLuminance")) > 0 ? String(propGetFloat("MasteringDisplayMinLuminance")) : "0.005", temp_dir, true) }
