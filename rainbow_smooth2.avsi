@@ -1,4 +1,6 @@
 ### Changelog ###
+# Changed back default hthresh to 220 (SmoothUV2 4.1.0)
+### ###
 # Function name changed to rainbow_smooth2.
 ### ###
 # Changed to use SmoothUV2.
@@ -27,7 +29,7 @@
 #           the masking is only used for hthresh, so if you set lthresh > hthresh lthresh will be
 #           the overall thresh and no masking will be used (fastest)
 #           but if you set lthresh <= 0 you disable the basic chromasmoothing and use only the
-#           chromasmoothing on edges [0...255 -> 0, 125]
+#           chromasmoothing on edges [0...450 -> 0, 220]
 #   - mask
 #           if not defined, default mask is used
 #           otherwise it must be clip or string (RPN expression for Expr)
@@ -42,7 +44,7 @@ function rainbow_smooth2(clip orig, int "radius", int "lthresh", int "hthresh", 
 ### parameters ###
 radius	= default(radius, 3)
 lthresh	= default(lthresh, 0)
-hthresh	= default(hthresh, 125)
+hthresh	= default(hthresh, 220)
 mask = default(mask, "")
 
 Assert(radius >= 1 && radius <= 7, "rainbow_smooth: radius range is 1..7")
