@@ -52,10 +52,11 @@ Function ChubbyRain2(clip c, int "th", int "radius", bool "show", int "sft", boo
         SelectEvery(4,0,3)
         Weave()
         
+        ScriptClip("""
         if (propGetType("_FieldBased") > 0)
         {
-            ScriptClip(""" propSet("_FieldBased", _field) """)
-        }
+            propSet("_FieldBased", _field)
+        } """)
     }
     else
     {
