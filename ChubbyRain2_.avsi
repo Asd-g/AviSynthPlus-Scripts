@@ -21,7 +21,6 @@ Function ChubbyRain2(clip c, int "th", int "radius", bool "show", int "sft", boo
     radius = default(radius,10)
     show = default(show,false)
     sft = default (sft, 10)
-    interlaced = default(interlaced, false)
     
     uc = mt_convolution(c, horizontal="1",vertical="1 -2 1",Y=1,U=3,V=3)
     mt_convolution(c, horizontal="1",vertical="1 2 1",Y=2,U=3,V=3)
