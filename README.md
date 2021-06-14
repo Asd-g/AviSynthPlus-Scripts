@@ -13,7 +13,6 @@
 - debandmask_
 - FFMS2_ - additional parameters for better font styling.
 - FixBrightnessProtect3 - it changes the brightness of column/row.
-- FixChromaBleedingMod_ - high bit depth support.
 - Fixer - a wrapper of EdgeFixer.
 - GMSD - port of the VapourSynth GMSD.
 - IQA_downsample - downsampler for image quality assessment model.
