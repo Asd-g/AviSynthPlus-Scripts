@@ -3,6 +3,8 @@
 
 ### Changelog ###
 #---------------
+# Removed restriction for only 420 video.
+#---------------
 # Fixed interlaced=true.
 #---------------
 # Changed requirements: replaced Cnr2 with vsCnr2.
@@ -12,8 +14,6 @@
 Function ChubbyRain2(clip c, int "th", int "radius", bool "show", int "sft", bool "interlaced")
 {
 #based on Mug Funky's ChubbyRain
-
-    Assert(Is420(c), "ChubbyRain2: only clips with chroma subsampling 420 are supported.")
 
     th = default(th,10)
     radius = default(radius,10)
