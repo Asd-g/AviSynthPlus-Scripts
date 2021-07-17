@@ -3,6 +3,8 @@
 
 ### Changelog ###
 #---------------
+# Replaced mt_convolution with GeneralConvolution for >10% speed up.
+#---------------
 # Made parameter "interlaced" dummy.
 #---------------
 # Removed restriction for only 420 video.
@@ -22,8 +24,8 @@ Function ChubbyRain2(clip c, int "th", int "radius", bool "show", int "sft", boo
     show = default(show,false)
     sft = default (sft, 10)
     
-    uc = mt_convolution(c, horizontal="1",vertical="1 -2 1",Y=1,U=3,V=3)
-    mt_convolution(c, horizontal="1",vertical="1 2 1",Y=2,U=3,V=3)
+    uc = GeneralConvolution(c, matrix="0 1 0 0 -2 0 0 1 0", luma=false, alpha=false)
+    GeneralConvolution(c, matrix="0 1 0 0 2 0 0 1 0", luma=false, alpha=false)
     bifrost(interlaced=false)
     vsCnr2()
     cc = temporalsoften(radius,0,sft,2,2)
