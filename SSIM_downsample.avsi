@@ -7,7 +7,7 @@ The solution is derived in closed-form, which leads to the simple, efficient imp
 The downscaled images retain perceptually important features and details, resulting in an accurate and spatio-temporally consistent representation of the high resolution input.
 
 This is an pseudo-implementation of SSIM downsampler with slight modification.
-The pre-downsampling is performed by avsresize, and the behaviour of convolution at the border is uniform.
+The behaviour of convolution at the border is uniform.
 All the internal calculations are done at 32-bit float.
 */
 
@@ -32,7 +32,7 @@ All the internal calculations are done at 32-bit float.
 # If it's a float, it specifies the "sigmaX" of vsTCanny.
 # If it's function, it acts as a general smoother.
 #---------------
-# kernel (default "Bicubic"): Resample kernel of avsresize.
+# kernel (default "z_BicubicResize"): Resample kernel.
 #---------------
 # epsilon (default 0.000001)
 #---------------
@@ -56,13 +56,15 @@ SSIM_downsample(1280,532, resample_args="b=-0.6, c=0", dither="error_diffusion",
 
 ### Changelog ###
 #---------------
+# Allowed other resizers than avsresize.
+#---------------
 # Initial version.
 
 
 Function SSIM_downsample(clip c, int target_width, int target_height, val "smooth", string "kernel", float "epsilon", string "resample_args", string "dither")
 {
     smooth = Default(smooth, 1.5)
-    kernel = Default(kernel, "Bicubic")
+    kernel = Default(kernel, "z_BicubicResize")
     epsilon = Default(epsilon, 0.000001)
     dither = Default(dither, "none")
     
@@ -76,18 +78,18 @@ Function SSIM_downsample(clip c, int target_width, int target_height, val "smoot
 
     resample_args = (Defined(resample_args)) ? ", " + resample_args : ""
     
-    l = Eval("z_" + kernel + "Resize" + "(" + String(target_width) + "," +  String(target_height) + resample_args + ")")
+    l = Eval(kernel + "(" + String(target_width) + "," +  String(target_height) + resample_args + ")")
 
     if (IsFloat(smooth))
     {
         m = vsTCanny(l, sigmaY=smooth, sigmaU=smooth, sigmaV=smooth, mode=-1)
-        r = Expr(vsTCanny(Expr(l, "x dup *"), sigmaY=smooth, sigmaU=smooth, sigmaV=smooth, mode=-1), vsTCanny(Eval("z_" + kernel + "Resize" + """(Expr("x x *"),""" + String(target_width) + "," +  String(target_height) + resample_args + ")"), sigmaY=smooth, sigmaU=smooth, sigmaV=smooth, mode=-1), Expr(m, "x dup *"), "x z - "+ String(epsilon) +" < 0 y z - x z - / 0.5 pow ?")
+        r = Expr(vsTCanny(Expr(l, "x dup *"), sigmaY=smooth, sigmaU=smooth, sigmaV=smooth, mode=-1), vsTCanny(Eval(kernel + """(Expr("x x *"),""" + String(target_width) + "," +  String(target_height) + resample_args + ")"), sigmaY=smooth, sigmaU=smooth, sigmaV=smooth, mode=-1), Expr(m, "x dup *"), "x z - "+ String(epsilon) +" < 0 y z - x z - / 0.5 pow ?")
         Expr(vsTCanny(m, sigmaY=smooth, sigmaU=smooth, sigmaV=smooth, mode=-1), vsTCanny(r, sigmaY=smooth, sigmaU=smooth, sigmaV=smooth, mode=-1), l, vsTCanny(Expr(r, m, "x y *"), sigmaY=smooth, sigmaU=smooth, sigmaV=smooth, mode=-1), "x y z * + a -")
     }
     else
     {      
         m = l.Eval(smooth)
-        r = Expr(Expr(l, "x dup *").Eval(smooth), Eval("z_" + kernel + "Resize" + """(Expr("x x *"),""" + String(target_width) + "," +  String(target_height) + resample_args + ")").Eval(smooth),  Expr(m, "x dup *"), "x z - "+ String(epsilon) +" < 0 y z - x z - / 0.5 pow ?")
+        r = Expr(Expr(l, "x dup *").Eval(smooth), Eval(kernel + """(Expr("x x *"),""" + String(target_width) + "," +  String(target_height) + resample_args + ")").Eval(smooth),  Expr(m, "x dup *"), "x z - "+ String(epsilon) +" < 0 y z - x z - / 0.5 pow ?")
         Expr(m.Eval(smooth), r.Eval(smooth), l, Expr(r, m, "x y *").Eval(smooth), "x y z * + a -")        
     }
 
