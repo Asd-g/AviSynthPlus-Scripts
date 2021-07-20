@@ -35,7 +35,7 @@ Function ChubbyRain2(clip c, int "th", int "radius", bool "show", int "sft", boo
     sft = default (sft, 10)
     
     uc = Expr(c, "", "x[0,-1] x[0,0] -2 * + x[0,1] +")
-    Expr(c, "", "x[0,-1] x[0,0] 2 * + x[0,1] + 0.2501 *")
+    Expr(c, "", "x[0,-1] x[0,0] 2 * + x[0,1] + 0.250001 *")
     bifrost(interlaced=false)
     vsCnr2()
     cc = temporalsoften(radius,0,sft,2,2)
