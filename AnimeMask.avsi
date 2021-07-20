@@ -27,6 +27,8 @@ Generates edge/ringing mask for anime based on gradient operator.
 
 ### Changelog ###
 #---------------
+# Replaced GeneralConvolution with Expr for >3.5x speed up.
+#---------------
 # Initial version.
 
 
@@ -48,13 +50,13 @@ Function AnimeMask(clip c, float "shift", string "_expr", int "mode")
         shift = -shift
     }
     
-    GeneralConvolution(input, matrix="0, 0, 0, 0, 2, -1, 0, -1, 0")
+    Expr(input, "x[0,0] 2 * x[1,0] -1 * + x[0,1] -1 * +")
     mask1 =  z_ConvertFormat(src_left=shift, src_top=shift, colorspace_op="auto:auto:auto:f=>same:same:same:f", resample_filter="bicubic")
-    GeneralConvolution(input, matrix="0, -1, 0, -1, 2, 0, 0, 0, 0")
+    Expr(input, "x[0,-1] -1 * x[-1,0] -1 * + x[0,0] 2 * +")
     mask2 = z_ConvertFormat(src_left=-shift, src_top=-shift, colorspace_op="auto:auto:auto:f=>same:same:same:f", resample_filter="bicubic")
-    GeneralConvolution(input, matrix="0, -1, 0, 0, 2, -1, 0, 0, 0")
+    Expr(input, "x[0,-1] -1 * x[0,0] 2 * + x[1,0] -1 * +")
     mask3 = z_ConvertFormat(src_left=shift, src_top=-shift, colorspace_op="auto:auto:auto:f=>same:same:same:f", resample_filter="bicubic")
-    GeneralConvolution(input, matrix="0, 0, 0, -1, 2, 0, 0, -1, 0")
+    Expr(input, "x[-1,0] -1 * x[0,0] 2 * + x[0,1] -1 * +")
     mask4 = z_ConvertFormat(src_left=-shift, src_top=shift, colorspace_op="auto:auto:auto:f=>same:same:same:f", resample_filter="bicubic")
     
     calc_expr = (Defined(_expr)) ? ("x x * y y * + z z * + a a * + sqrt " + _expr) : ("x x * y y * + z z * + a a * + sqrt")
