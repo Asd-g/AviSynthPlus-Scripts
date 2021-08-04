@@ -98,6 +98,8 @@ bbmod([60,20,40], cleft=[40,20,10], thresh=[12,4,5], blur=[100,999,20]) # same a
 
 ### Changelog ###
 #---------------
+# Fixed processing when the clip has only one plane.
+#---------------
 # Added parameter "cloc".
 #---------------
 # Code clean up; fixed cBottom assert for chroma; arrays - if a single value is specified, it will be used for all planes, if two values are given then the second value will be used for the third plane as well.
@@ -131,10 +133,9 @@ Function bbmod(clip c, val "cTop", val "cBottom", val "cLeft", val "cRight", val
 {
     Assert(isYUV(c), "bbmod: This is not an YUV/Y clip.")
      
-    num_comp_1 = NumComponents(c) == 1
     y = Default(y, true)
-    u = Default(u, num_comp_1 ? false : true)
-    v = Default(v, num_comp_1 ? false : true)
+    u = Default(u, true)
+    v = Default(v, true)
     
     ctop_a = Defined(cTop) && IsArray(cTop) ?
         \ ArraySize(cTop) == 1 ? [cTop[0], cTop[0], cTop[0]] :
@@ -228,7 +229,8 @@ Function bbmod(clip c, val "cTop", val "cBottom", val "cLeft", val "cRight", val
                 if (cright_ > 0) { StackVertical(Crop(0, 0, 0, cright_crop).btb(cright_, thresh_, blur_, i, clip_444, clip_420, cloc), Crop(0, cright_crop, 0, 0)).TurnRight() }
                 else { TurnRight() }             
 
-                yplane = last
+                if (NumComponents(c) == 1) { return last }
+                else { yplane = last }
             }
             else
             {
