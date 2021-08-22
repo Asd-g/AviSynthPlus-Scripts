@@ -12,6 +12,7 @@
 - ChubbyRain2_ - high bit depth support.
 - ComparisonGen - it takes images from two videos in order to compare them.
 - debandmask_
+- dldet - helper function for finding black/dirty lines on the borders.
 - FFMS2_ - additional parameters for better font styling.
 - FixBrightnessProtect3 - it changes the brightness of column/row.
 - Fixer - a wrapper of EdgeFixer.
