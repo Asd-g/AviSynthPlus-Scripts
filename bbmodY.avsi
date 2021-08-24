@@ -1,5 +1,5 @@
 /*
-Function to apply bbmod from random column and row instead from only the first/last column and row.
+Function to apply bbmod from a specific column and row instead of from only the first/last column and row.
 
 It works only on the luma plane.
 */
