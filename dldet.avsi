@@ -37,6 +37,20 @@ The difference between lines could be displayed or the frames above threshold co
 # show (default false): Whether to display only the saved frames.
 
 
+# Info about the usage
+/*
+Usually you can firstly use debug=true: find frames with dirty lines (dark and bright) to see what is difference. The difference can be used as threshold.
+
+After set `output` and debug to false. Run the script in one of the following ways:
+- avsr ( https://forum.doom9.org/showthread.php?t=173259 ): avsr(64) script_name.avs;
+- avsmeter ( https://forum.doom9.org/showthread.php?t=174797 ): avsmeter(64) script_name.avs;
+- ffmpeg: ffmpeg -i script_name.avs -f null - ;
+- AvsPmod: Video->Tools->Run analysis pass.
+
+When you have the saved frames set show to true to see only the saved frames.
+*/
+
+
 ### Changelog ###
 #---------------
 # Fixed right, bottom when debug=true.
