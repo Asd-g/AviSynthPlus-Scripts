@@ -10,7 +10,7 @@ The difference between lines could be displayed or the frames above threshold co
 
 ### Usage ###
 ###
-# Function dldet(clip c, string "output", int "left", int "top", int "right", int "bottom", float "tl", float "tt", float "tr", float "tb", int "width", int "height", bool "debug", bool "show")
+# dldet(clip c, string "output", int "left", int "top", int "right", int "bottom", float "tl", float "tt", float "tr", float "tb", int "width", int "height", bool "debug", bool "show")
 ###
 ## Parameters ##
 #---------------
