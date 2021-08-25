@@ -56,6 +56,8 @@ SSIM_downsample(1280,532, resample_args="b=-0.6, c=0", dither="error_diffusion",
 
 ### Changelog ###
 #---------------
+# Fixed smooth when it's float.
+#---------------
 # Allowed other resizers than avsresize.
 #---------------
 # Initial version.
@@ -82,9 +84,9 @@ Function SSIM_downsample(clip c, int target_width, int target_height, val "smoot
 
     if (IsFloat(smooth))
     {
-        m = vsTCanny(l, sigmaY=smooth, sigmaU=smooth, sigmaV=smooth, mode=-1)
-        r = Expr(vsTCanny(Expr(l, "x dup *"), sigmaY=smooth, sigmaU=smooth, sigmaV=smooth, mode=-1), vsTCanny(Eval(kernel + """(Expr("x x *"),""" + String(target_width) + "," +  String(target_height) + resample_args + ")"), sigmaY=smooth, sigmaU=smooth, sigmaV=smooth, mode=-1), Expr(m, "x dup *"), "x z - "+ String(epsilon) +" < 0 y z - x z - / 0.5 pow ?")
-        Expr(vsTCanny(m, sigmaY=smooth, sigmaU=smooth, sigmaV=smooth, mode=-1), vsTCanny(r, sigmaY=smooth, sigmaU=smooth, sigmaV=smooth, mode=-1), l, vsTCanny(Expr(r, m, "x y *"), sigmaY=smooth, sigmaU=smooth, sigmaV=smooth, mode=-1), "x y z * + a -")
+        m = vsTCanny(l, sigmaY=smooth, sigma_vY=smooth, mode=-1)
+        r = Expr(vsTCanny(Expr(l, "x dup *"), sigmaY=smooth, sigma_vY=smooth, mode=-1), vsTCanny(Eval(kernel + """(Expr("x x *"),""" + String(target_width) + "," +  String(target_height) + resample_args + ")"), sigmaY=smooth, sigma_vY=smooth, mode=-1), Expr(m, "x dup *"), "x z - "+ String(epsilon) +" < 0 y z - x z - / 0.5 pow ?")
+        Expr(vsTCanny(m, sigmaY=smooth, sigma_vY=smooth, mode=-1), vsTCanny(r, sigmaY=smooth, sigma_vY=smooth, mode=-1), l, vsTCanny(Expr(r, m, "x y *"), sigmaY=smooth, sigma_vY=smooth, mode=-1), "x y z * + a -")
     }
     else
     {      
