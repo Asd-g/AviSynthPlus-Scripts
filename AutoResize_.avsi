@@ -66,6 +66,8 @@ AutoResize(720, resizer="z_BicubicResize", args="b=-0.25, c=0.125") # Assume 192
 
 ### Changelog ###
 #---------------
+# Added support for some kernels that don't have parameters src_left/src_top/src_width/src_height: DPID, DPIDraw, fmtc_resample, ResizeShader, SSIM_downsample.
+#---------------
 # Added paramters mod2 and args.
 #---------------
 # "SD" mode: fixed target resolution when crop values are used.
@@ -120,8 +122,13 @@ function AutoResize(clip c, val mode, int "left", int "top", int "right", int "b
     c = fill_margins ? FillMargins(c, proc_left, proc_top, proc_right, proc_bottom) : c
     
     args = defined(args) ? ", " + args : ""
+    resizer = lcase(resizer)
     
-    if (lcase(dither_type) != "no")
+    if (resizer == "dpid" || resizer == "dpidraw" || resizer == "fmtc_resample" || resizer == "resizeshader" || resizer == "ssim_downsample")
+    {
+        return eval(resizer + "(c," + newsize + args + ")")
+    }
+    else if (lcase(dither_type) != "no")
     {    
         return eval(resizer + "(c," + newsize + ", src_left=proc_left, src_top=proc_top, src_width=-proc_right, src_height=-proc_bottom, dither=dither_type" + args + ")")
     }
