@@ -49,6 +49,8 @@ Ref:
 
 ### Changelog ###
 #---------------
+# Fixed stddev parameter.
+#---------------
 # Changed global scope of ssim_map to local.
 #---------------
 # Initial version.
@@ -94,14 +96,14 @@ Function vsSSIM(clip clip1, clip clip2, bool "downsample", float "k1", float "k2
     }
     
     stddev = Default(stddev, 1.5)
-    mu1 = vsTCanny(clip1, sigmay=stddev, mode=-1)
-    mu2 = vsTCanny(clip2, sigmay=stddev, mode=-1)
+    mu1 = vsTCanny(clip1, sigmay=stddev, sigma_vy=stddev, mode=-1)
+    mu2 = vsTCanny(clip2, sigmay=stddev, sigma_vy=stddev, mode=-1)
     mu1_sq = Expr(mu1, "x x *")
     mu2_sq = Expr(mu2, "x x *")
     mu1_mu2 = Expr(mu1, mu2, "x y *")
-    sigmay1_sq_pls_mu1_sq = vsTCanny(Expr(clip1, "x x *"), sigmay=stddev, mode=-1)
-    sigmay2_sq_pls_mu2_sq = vsTCanny(Expr(clip2, "x x *"), sigmay=stddev, mode=-1)
-    sigmay12_pls_mu1_mu2 = vsTCanny(Expr(clip1, clip2, "x y *"), sigmay=stddev, mode=-1)
+    sigmay1_sq_pls_mu1_sq = vsTCanny(Expr(clip1, "x x *"), sigmay=stddev, sigma_vy=stddev, mode=-1)
+    sigmay2_sq_pls_mu2_sq = vsTCanny(Expr(clip2, "x x *"), sigmay=stddev, sigma_vy=stddev, mode=-1)
+    sigmay12_pls_mu1_mu2 = vsTCanny(Expr(clip1, clip2, "x y *"), sigmay=stddev, sigma_vy=stddev, mode=-1)
     
     ssim_map = c1 > 0.0 && c2 > 0.0 ?
     \ Expr(mu1_mu2, sigmay12_pls_mu1_mu2, mu1_sq, mu2_sq, sigmay1_sq_pls_mu1_sq, mu1_sq, sigmay2_sq_pls_mu2_sq, mu2_sq, "2.0 x * "+ String(c1) +" + 2.0 y x - * "+ String(c2) +" + * z a + "+ String(c1) +" + b c - d e - + "+ String(c2) +" + * /") :
