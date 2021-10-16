@@ -58,14 +58,6 @@
 # Lower values: less aggressive highlights boost.
 
 
-### NOTE ###
-/*
-When peak_compute=false:
-- If "mdmaxl" and/or "mdminl" not specified a temporary file "_stats.txt" is created in %temp% folder containing the values of the frame properties "MasteringDisplayMaxLuminance"/"MasteringDisplayMaxLuminance".
-- This temporary file is automatically deleted when the frame is ready.
-*/
-
-
 ### Info about usage ###
 /*
 ### If there is clipping that have to be fixed ###
@@ -86,6 +78,8 @@ It's recommended the video to be cropped for peak_compute=true. The black bars m
 
 
 ### Changelog ###
+#---------------
+# Optimized performance when peak_compute=false (~120% higher fps).
 #---------------
 # Replaced FrameEvalute with ScriptClip because the former doesn't like function objects.
 #---------------
@@ -113,22 +107,9 @@ Function bt2390_pq(clip c, int "mdmaxl", int "tdmaxl", float "mdminl", float "td
 
 Function _static(clip c, int "mdmaxl", int "tdmaxl", float "mdminl", float "tdminl", bool "_cs", float "cs_weight", bool "use_alternate", bool "output8", int "colors", float "colors_weight", bool "gain", int "gain_factor")
 {
-    _min = !Defined(mdminl)
-    _max = !Defined(mdmaxl)
-    if (_min || _max)
-    {
-        temp_dir = RT_GetSystemEnv("temp") + "\" + "_stats.txt"
-        
-        ScriptClip(c, function [temp_dir, _min, _max] ()
-            {
-                if (_max) { RT_TxtWriteFile((propGetType("MasteringDisplayMaxLuminance")) > 0 ? String(propGetFloat("MasteringDisplayMaxLuminance")) : "1000.0", temp_dir) }
-                if (_min) { RT_TxtWriteFile((propGetType("MasteringDisplayMinLuminance")) > 0 ? String(propGetFloat("MasteringDisplayMinLuminance")) : "0.005", temp_dir, true) }
-            })
-        RT_AverageLuma(n=0, w=1, h=1)
-        
-        mdmaxl = _max ? Value(RT_ReadTxtFromFile(temp_dir, 1, 0)) : mdmaxl
-        mdminl = _min ? _max ? Value(RT_ReadTxtFromFile(temp_dir, 1, 1)) : Value(RT_ReadTxtFromFile(temp_dir, 1, 0)) : mdminl
-    }
+    current_frame = 0
+    mdmaxl = Default(mdmaxl, (propGetType(c, "MasteringDisplayMaxLuminance")) > 0 ? propGetFloat(c, "MasteringDisplayMaxLuminance") : 1000.0)
+    mdminl = Default(mdminl, (propGetType(c, "MasteringDisplayMinLuminance")) > 0 ? propGetFloat(c, "MasteringDisplayMinLuminance") : 0.005)
     
     tdmaxl = Default(tdmaxl, 200)
     tdminl = Default(tdminl, mdminl)
@@ -139,9 +120,7 @@ Function _static(clip c, int "mdmaxl", int "tdmaxl", float "mdminl", float "tdmi
     Assert(gain_factor > 0, "bt2390_pq: gain_factor must be greater than 0.")
     
     _common(c, mdmaxl, tdmaxl, mdminl, tdminl, _cs, cs_weight, use_alternate, output8, colors, colors_weight, gain, gain_factor)
-    
-    if (_min || _max) { ScriptClip(function [temp_dir] () { CallCmd(close="cmd /c del " + temp_dir, hide=true)  }) }
-    
+        
     return last
 }
 
