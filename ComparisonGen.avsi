@@ -1,9 +1,12 @@
 ### A script for saving images from up to 5 clips.
 
 
+### Requirements - AviSynth+ >= r3442, avsresize, RT_Stats.
+
+
 ### Usage ###
 ###
-# Function ComparisonGen(val c, val "image_file", val "frame_type", string "pframes_file", int "n", float "offset_coef", string "matrix", string "pixel_type", bool "check_type")
+# Function ComparisonGen(val c, string_array "image_file", val_array "frame_type", string "pframes_file", int "n", float "offset_coef", string "matrix", string "pixel_type", bool "check_type")
 ###
 ## Parameters ##
 #---------------
@@ -11,7 +14,7 @@
 # Type of array.
 # Clips must be between 2..5.
 #---------------
-# image_file (default ["%06dsource.png", "%06dencode.png", "%06dencode1.png", "%06dencode2.png", "%06dencode3.png"]): The path+filename of the new saved images.
+# image_file (default ["%06d_0.png", "%06d_1.png", "%06d_2.png", "%06d_3.png", "%06d_4.png"]): The path+filename of the new saved images.
 # Type of array.
 # It must have the same length as 'c'.
 #---------------
@@ -85,8 +88,8 @@ ComparisonGen([s, e], frame_type=["I", "B"])
 ###
 s=FFVideoSource(clip1).Crop(0, 148, -0, -148).LWLinfo()
 e=FFVideoSource(clip2).LWLinfo()
-ComparisonGen([s, e], image_file=["d:\source%03d.png", "d:\encode%03d.png"])
-# Clip1 images will be saved in D:\ with names "sourcexxx.png" and clip2 images will be saved in D:\ with names "encodexxx.png".
+ComparisonGen([s, e], image_file=["d:\clip0%03d.png", "d:\clip1%03d.png"])
+# Clip1 images will be saved in D:\ with names "clip0xxx.png" and clip2 images will be saved in D:\ with names "clip1xxx.png".
 ###
 ###
 s=FFVideoSource(clip1).Crop(0, 148, -0, -148).LWLinfo()
@@ -116,6 +119,10 @@ Note - if AvsPmod is used and default s_image_file and e_image_file are used, th
 
 ### Changelog ###
 #---------------
+# Changed default values of image_file.
+# Changed image_file type from val to string_array.
+# Changed frame_type from val to val_array.
+#---------------
 # Replaced FrameEvalute with ScriptClip because the former doesn't like function objects.
 #---------------
 # Added parameter check_type.
@@ -143,7 +150,7 @@ Note - if AvsPmod is used and default s_image_file and e_image_file are used, th
 # Initial version.
 
 
-Function ComparisonGen(val c, val "image_file", val "frame_type", string "pframes_file", int "n", float "offset_coef", string "matrix", string "pixel_type", bool "check_type")
+Function ComparisonGen(val c, string_array "image_file", val_array "frame_type", string "pframes_file", int "n", float "offset_coef", string "matrix", string "pixel_type", bool "check_type")
 {
     Assert(ArraySize(c) >= 2, "ComparisonGen: at least two clips are required.")
     Assert(ArraySize(c) <= 5, "ComparisonGen: maximum 5 clips are supported.")
@@ -159,10 +166,10 @@ Function ComparisonGen(val c, val "image_file", val "frame_type", string "pframe
         Assert(ArraySize(c) == ArraySize(image_file), "ComparisonGen: more or less 'image_file' given than there are clips.")
     }
     
-    _image = Default(image_file, (ArraySize(c) == 2) ? ["%06dsource.png", "%06dencode.png"] :
-    \ (ArraySize(c) == 3) ? ["%06dsource.png", "%06dencode.png", "%06dencode1.png"] :
-    \  (ArraySize(c) == 4) ? ["%06dsource.png", "%06dencode.png", "%06dencode1.png", "%06dencode2.png"] :
-    \ ["%06dsource.png", "%06dencode.png", "%06dencode1.png", "%06dencode2.png", "%06dencode3.png"])
+    _image = Default(image_file, (ArraySize(c) == 2) ? ["%06d_0.png", "%06d_1.png"] :
+    \ (ArraySize(c) == 3) ? ["%06d_0.png", "%06d_1.png", "%06d_2.png"] :
+    \  (ArraySize(c) == 4) ? ["%06d_0.png", "%06d_1.png", "%06d_2.png", "%06d_3.png"] :
+    \ ["%06d_0.png", "%06d_1.png", "%06d_2.png", "%06d_3.png", "%06d_4.png"])
     
     if (Defined(frame_type))
     {
