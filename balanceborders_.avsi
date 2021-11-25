@@ -5,7 +5,7 @@ by PL
 что, возможно, позволит избежать "сильного" использования Crop() для удаления "неприятных краёв",
 не очень сильно отличающихся от "основного" изображения. См. примеры скринов.
  */
- 
+
 
 ### Usage ###
 ###
@@ -18,8 +18,7 @@ by PL
 # cTop, cBottom, cLeft, cRight (default 0): The number of lines to be filtered along each edge.
 # If single number is used: it's applied for all three planes.
 # If array is used: the first number is applied to luma plane, the second number - u plane, the third number - v plane.
-# If array of one number is used: the number is applied for all thre planes.
-# If array of two numbers is used: the first number - luma plane, the second plane - u and v planes.
+# If array of two numbers is used: the first number - luma plane, the second number - u and v planes.
 #---------------
 # thresh (default 128.0): Threshold of the filtering.
 # Higher values: more filtering.
@@ -27,8 +26,7 @@ by PL
 # Recommended values: 0..16.0 or 128.0.
 # If single number is used: it's applied for all three planes.
 # If array is used: the first number is applied to luma plane, the second number - u plane, the third number - v plane.
-# If array of one number is used: the number is applied for all thre planes.
-# If array of two numbers is used: the first number - luma plane, the second plane - u and v planes.
+# If array of two numbers is used: the first number - luma plane, the second number - u and v planes.
 #---------------
 # blur (default 999): Blur strength.
 # Higher values: weak blurring.
@@ -36,8 +34,7 @@ by PL
 # Recommended values: 1..20 or 999.
 # If single number is used: it's applied for all three planes.
 # If array is used: the first number is applied to luma plane, the second number - u plane, the third number - v plane.
-# If array of one number is used: the number is applied for all thre planes.
-# If array of two numbers is used: the first number - luma plane, the second plane - u and v planes.
+# If array of two numbers is used: the first number - luma plane, the second number - u and v planes.
 #---------------
 # y, u, v (default true): Whether to filter the corresponding plane.
 #---------------
@@ -72,8 +69,8 @@ by PL
   #   BalanceBorders(3,3,2,2, thresh=8,   blur=4)  //несильно изменяет "основную проблемную область"
   #   BalanceBorders(1,1,0,0, thresh=128, blur=1)  //заменяет верхнюю и нижнюю строку пикселей (для удаления "чёрных полос")
   #-------------------------------------------------------------------------------------------------------------------------------
-  
-  
+
+
 ### Example with arrays (AviSynth 3.6.x required) ###
 /*
 BalanceBorders([60,20], cleft=[40,20], y=true, u=true, v= false) # same as BalanceBorders(60, cleft=40, blur=999, y=true, u=false, v=false).BalanceBorders(20, cleft=20, y=false, u=true, v=false)
@@ -91,6 +88,9 @@ BalanceBorders([60,60], cleft=[40,40], thresh=[12,12], blur=[100,100], y=false, 
 BalanceBorders([60,20,40], cleft=[40,20,10], thresh=[12,4,5], blur=[100,999,20]) # same as BalanceBorders(60, cleft=40, thresh=12, blur=100, u=false, v=false).BalanceBorders(20, cleft=20, thresh=4, y=false, v=false).BalanceBorders(40, cleft=10, thresh=5, blur=20, y=false, u=false)
 */
 ###
+
+
+### Requirements - AviSynth+ >= 3.6, avsresize
 
 
 ### Changelog ###
@@ -127,128 +127,156 @@ BalanceBorders([60,20,40], cleft=[40,20,10], thresh=[12,4,5], blur=[100,999,20])
 Function BalanceBorders(clip c, val "cTop", val "cBottom", val "cLeft", val "cRight", val "thresh", val "blur", bool "y", bool "u", bool "v", string "cloc")
 {
     Assert(isYUV(c), "BalanceBorders: This is not an YUV/Y clip.")
-     
+
     y = Default(y, true)
     u = Default(u, true)
-    v = Default(v, true) 
-    
-    ctop_a = Defined(cTop) && IsArray(cTop) ?
+    v = Default(v, true)
+
+    ctop_a = Defined(cTop) ?
+        \ IsArray(cTop) ?
         \ ArraySize(cTop) == 1 ? [cTop[0], cTop[0], cTop[0]] :
         \ ArraySize(cTop) == 2 ? [cTop[0], cTop[1], cTop[1]] :
         \ ArraySize(cTop) == 3 ? [cTop[0], cTop[1], cTop[2]] :
-        \ Assert(ArraySize(cTop) == 3, "BalanceBorders: more cTop given than there are planes.") :
-    \ Defined(cTop) ? cTop : 0    
-    
-    cbottom_a = Defined(cBottom) && IsArray(cBottom) ?
+        \ Assert(ArraySize(cTop) == 3, "BalanceBorders: the cTop values must be no more than three.") :
+        \ [cTop, cTop, cTop] :
+        \ [0, 0, 0]
+
+    cbottom_a = Defined(cBottom) ?
+        \ IsArray(cBottom) ?
         \ ArraySize(cBottom) == 1 ? [cBottom[0], cBottom[0], cBottom[0]] :
         \ ArraySize(cBottom) == 2 ? [cBottom[0], cBottom[1], cBottom[1]] :
         \ ArraySize(cBottom) == 3 ? [cBottom[0], cBottom[1], cBottom[2]] :
-        \ Assert(ArraySize(cBottom) == 3, "BalanceBorders: more cBottom given than there are planes.") :
-    \ Defined(cBottom) ? cBottom : 0
-    
-    cleft_a = Defined(cLeft) && IsArray(cLeft) ?
+        \ Assert(ArraySize(cBottom) == 3, "BalanceBorders: the cBottom values must be no more than three.") :
+        \ [cBottom, cBottom, cBottom] :
+        \ [0, 0, 0]
+
+    cleft_a = Defined(cLeft) ?
+        \ IsArray(cLeft) ?
         \ ArraySize(cLeft) == 1 ? [cLeft[0], cLeft[0], cLeft[0]] :
         \ ArraySize(cLeft) == 2 ? [cLeft[0], cLeft[1], cLeft[1]] :
         \ ArraySize(cLeft) == 3 ? [cLeft[0], cLeft[1], cLeft[2]] :
-        \ Assert(ArraySize(cLeft) == 3, "BalanceBorders: more cLeft given than there are planes.") :
-    \ Defined(cLeft) ? cLeft : 0
-    
-    cright_a = Defined(cRight) && IsArray(cRight) ?
+        \ Assert(ArraySize(cLeft) == 3, "BalanceBorders: the cLeft values must be no more than three.") :
+        \ [cLeft, cLeft, cLeft] :
+        \ [0, 0, 0]
+
+    cright_a = Defined(cRight) ?
+        \ IsArray(cRight) ?
         \ ArraySize(cRight) == 1 ? [cRight[0], cRight[0], cRight[0]] :
         \ ArraySize(cRight) == 2 ? [cRight[0], cRight[1], cRight[1]] :
         \ ArraySize(cRight) == 3 ? [cRight[0], cRight[1], cRight[2]] :
-        \ Assert(ArraySize(cRight) == 3, "BalanceBorders: more cRight given than there are planes.") :
-    \ Defined(cRight) ? cRight : 0
-    
-    thresh_a = Defined(thresh) && IsArray(thresh) ?
+        \ Assert(ArraySize(cRight) == 3, "BalanceBorders: the cRight values must be no more than three.") :
+        \ [cRight, cRight, cRight] :
+        \ [0, 0, 0]
+
+    thresh_a = Defined(thresh) ?
+        \ IsArray(thresh) ?
         \ ArraySize(thresh) == 1 ? [thresh[0], thresh[0], thresh[0]] :
         \ ArraySize(thresh) == 2 ? [thresh[0], thresh[1], thresh[1]] :
         \ ArraySize(thresh) == 3 ? [thresh[0], thresh[1], thresh[2]] :
-        \ Assert(ArraySize(thresh) == 3, "BalanceBorders: more thresh given than there are planes.") :
-    \ Defined(thresh) ? thresh : 128.0
-    
-    blur_a = Defined(blur) && IsArray(blur) ?
+        \ Assert(ArraySize(thresh) == 3, "BalanceBorders: the thresh values must be no more than three.") :
+        \ [thresh, thresh, thresh] :
+        \ [128.0, 128.0, 128.0]
+
+    blur_a = Defined(blur) ?
+        \ IsArray(blur) ?
         \ ArraySize(blur) == 1 ? [blur[0], blur[0], blur[0]] :
         \ ArraySize(blur) == 2 ? [blur[0], blur[1], blur[1]] :
         \ ArraySize(blur) == 3 ? [blur[0], blur[1], blur[2]] :
-        \ Assert(ArraySize(blur) == 3, "BalanceBorders: more blur given than there are planes.") :
-    \ Defined(blur) ? blur : 999
-    
+        \ Assert(ArraySize(blur) == 3, "BalanceBorders: the blur values must be no more than three.") :
+        \ [blur, blur, blur] :
+        \ [999, 999, 999]
+
     cloc = Default(cloc, "left")
-    
+
     Assert(cloc == "left" || cloc == "top_left" || cloc == "center", "BalanceBorders: cloc must be one of the values 'left', 'top_left', 'center'.")
-    
+
     source_planes = [y, u, v]
     clip_444 = Is444(c)
     clip_420 = Is420(c)
     chrh = clip_420 ? 1 : 0
     chrw = clip_444 ? 0 : 1
-    
-    for (i = 0, min(NumComponents(c), 3) - 1)
+    num_planes = min(NumComponents(c), 3) - 1
+
+    for (i = 0, num_planes)
     {
         if (i == 0) { ExtractY(c) }
         else if (i == 1) { ExtractU(c) }
         else { ExtractV(c) }
-    
+
         if (source_planes[i])
         {
-            ctop_ = IsArray(ctop_a) ? ctop_a[i] : ctop_a
-            cbottom_ = IsArray(cbottom_a) ? cbottom_a[i] : cbottom_a
-            cleft_ = IsArray(cleft_a) ? cleft_a[i] : cleft_a
-            cright_ = IsArray(cright_a) ? cright_a[i] : cright_a
-            thresh_ = IsArray(thresh_a) ? thresh_a[i] : thresh_a
-            blur_ = IsArray(blur_a) ? blur_a[i] : blur_a
-            
-            Assert(blur_ > 0 && blur_ <= 999, "BalanceBorders: Blur parameter must be between 0..999.")
-            Assert(thresh_ > 0.0 && thresh_ <= 128.0, "BalanceBorders: Thresh parameter must be between 0.0..128.0.")
-                
+            Assert(blur_a[i] > 0 && blur_a[i] <= 999, "BalanceBorders: Blur parameter must be between 0..999.")
+            Assert(thresh_a[i] > 0.0 && thresh_a[i] <= 128.0, "BalanceBorders: Thresh parameter must be between 0.0..128.0.")
+
             if (i == 0)
             {
-                Assert(cleft_ * 4 < Width() && cright_ * 4 < Width(), "BalanceBorders: cLeft*4, cRight*4 has to be < width.")
-                Assert(ctop_ * 4 < Height() && cbottom_ * 4 < Height(), "BalanceBorders: cTop*4, cBottom*4 has to be < height.")                
-                
-                ctop_crop = ctop_ * 2
-                cleft_crop = cleft_ * 2
-                cbottom_crop = cbottom_ * 2
-                cright_crop = cright_ * 2
-                
-                if (ctop_ > 0) { StackVertical(Crop(0, 0, 0, ctop_crop).BalanceTopBorder(ctop_, thresh_, blur_, i, clip_444, clip_420, cloc), Crop(0, ctop_crop, 0, 0)).TurnRight() }
-                else { TurnRight() }            
-                
-                if (cleft_ > 0) { StackVertical(Crop(0, 0, 0, cleft_crop).BalanceTopBorder(cleft_, thresh_, blur_, i, clip_444, clip_420, cloc), Crop(0, cleft_crop, 0, 0)).TurnRight() }
+                Assert(cleft_a[i] * 4 < Width() && cright_a[i] * 4 < Width(), "BalanceBorders: cLeft*4, cRight*4 has to be < width.")
+                Assert(ctop_a[i] * 4 < Height() && cbottom_a[i] * 4 < Height(), "BalanceBorders: cTop*4, cBottom*4 has to be < height.")
+
+                if (ctop_a[i] > 0)
+                {
+                    ctop_crop = ctop_a[i] * 2
+                    StackVertical(Crop(0, 0, 0, ctop_crop).BalanceTopBorder(ctop_a[i], thresh_a[i], blur_a[i], i, clip_444, clip_420, cloc), Crop(0, ctop_crop, 0, 0)).TurnRight()
+                }
                 else { TurnRight() }
-                
-                if (cbottom_ > 0) { StackVertical(Crop(0, 0, 0, cbottom_crop).BalanceTopBorder(cbottom_ , thresh_, blur_, i, clip_444, clip_420, cloc), Crop(0, cbottom_crop, 0, 0)).TurnRight() }
+
+                if (cleft_a[i] > 0)
+                {
+                    cleft_crop = cleft_a[i] * 2
+                    StackVertical(Crop(0, 0, 0, cleft_crop).BalanceTopBorder(cleft_a[i], thresh_a[i], blur_a[i], i, clip_444, clip_420, cloc), Crop(0, cleft_crop, 0, 0)).TurnRight()
+                }
                 else { TurnRight() }
-                
-                if (cright_ > 0) { StackVertical(Crop(0, 0, 0, cright_crop).BalanceTopBorder(cright_, thresh_, blur_, i, clip_444, clip_420, cloc), Crop(0, cright_crop, 0, 0)).TurnRight() }
+
+                if (cbottom_a[i] > 0)
+                {
+                    cbottom_crop = cbottom_a[i] * 2
+                    StackVertical(Crop(0, 0, 0, cbottom_crop).BalanceTopBorder(cbottom_a[i] , thresh_a[i], blur_a[i], i, clip_444, clip_420, cloc), Crop(0, cbottom_crop, 0, 0)).TurnRight()
+                }
                 else { TurnRight() }
-                
+
+                if (cright_a[i] > 0)
+                {
+                    cright_crop = cright_a[i] * 2
+                    StackVertical(Crop(0, 0, 0, cright_crop).BalanceTopBorder(cright_a[i], thresh_a[i], blur_a[i], i, clip_444, clip_420, cloc), Crop(0, cright_crop, 0, 0)).TurnRight()
+                }
+                else { TurnRight() }
+
                 if (NumComponents(c) == 1) { return last }
                 else { yplane = last }
             }
             else
             {
-                Assert(BitRShiftL(cleft_ * 4, chrw) < Width() && BitRShiftL(cright_ * 4, chrw) < Width(), "BalanceBorders: cLeft*4, cRight*4 has to be < width.")
-                Assert(BitRShiftL(ctop_ * 4, chrh) < Height() && BitRShiftL(cbottom_ * 4, chrh) < Height(), "BalanceBorders: cTop*4, cBottom*4 has to be < height.")
-                
-                ctop_crop = BitRShiftL(ctop_ * 2, chrh)
-                cleft_crop = BitRShiftL(cleft_ * 2, chrw)
-                cbottom_crop = BitRShiftL(cbottom_ * 2, chrh)
-                cright_crop = BitRShiftL(cright_ * 2, chrw)
-                
-                if (ctop_ > 1) { StackVertical(Crop(0, 0, 0, ctop_crop).BalanceTopBorder(BitRShiftL(ctop_, chrh), thresh_, blur_, i, clip_444, clip_420, cloc), Crop(0, ctop_crop, 0, 0)).TurnRight() }
+                Assert(BitRShiftL(cleft_a[i] * 4, chrw) < Width() && BitRShiftL(cright_a[i] * 4, chrw) < Width(), "BalanceBorders: cLeft*4, cRight*4 has to be < width.")
+                Assert(BitRShiftL(ctop_a[i] * 4, chrh) < Height() && BitRShiftL(cbottom_a[i] * 4, chrh) < Height(), "BalanceBorders: cTop*4, cBottom*4 has to be < height.")
+
+                if (ctop_a[i] > 1)
+                {
+                    ctop_crop = BitRShiftL(ctop_a[i] * 2, chrh)
+                    StackVertical(Crop(0, 0, 0, ctop_crop).BalanceTopBorder(BitRShiftL(ctop_a[i], chrh), thresh_a[i], blur_a[i], i, clip_444, clip_420, cloc), Crop(0, ctop_crop, 0, 0)).TurnRight()
+                }
                 else { TurnRight() }
-                
-                if (cleft_ > 1) { StackVertical(Crop(0, 0, 0, cleft_crop).BalanceTopBorder(BitRShiftL(cleft_, chrw), thresh_, blur_, i, clip_444, clip_420, cloc), Crop(0, cleft_crop, 0, 0)).TurnRight() }
+
+                if (cleft_a[i] > 1)
+                {
+                    cleft_crop = BitRShiftL(cleft_a[i] * 2, chrw)
+                    StackVertical(Crop(0, 0, 0, cleft_crop).BalanceTopBorder(BitRShiftL(cleft_a[i], chrw), thresh_a[i], blur_a[i], i, clip_444, clip_420, cloc), Crop(0, cleft_crop, 0, 0)).TurnRight()
+                }
                 else { TurnRight() }
-                
-                if (cbottom_ > 1) { StackVertical(Crop(0, 0, 0, cbottom_crop).BalanceTopBorder(BitRShiftL(cbottom_, chrh), thresh_, blur_, i, clip_444, clip_420, cloc), Crop(0, cbottom_crop, 0, 0)).TurnRight() }
+
+                if (cbottom_a[i] > 1)
+                {
+                    cbottom_crop = BitRShiftL(cbottom_a[i] * 2, chrh)
+                    StackVertical(Crop(0, 0, 0, cbottom_crop).BalanceTopBorder(BitRShiftL(cbottom_a[i], chrh), thresh_a[i], blur_a[i], i, clip_444, clip_420, cloc), Crop(0, cbottom_crop, 0, 0)).TurnRight()
+                }
                 else { TurnRight() }
-                
-                if (cright_ > 1) { StackVertical(Crop(0, 0, 0, cright_crop).BalanceTopBorder(BitRShiftL(cright_, chrw), thresh_, blur_, i, clip_444, clip_420, cloc), Crop(0, cright_crop, 0, 0)).TurnRight() }
+
+                if (cright_a[i] > 1)
+                {
+                    cright_crop = BitRShiftL(cright_a[i] * 2, chrw)
+                    StackVertical(Crop(0, 0, 0, cright_crop).BalanceTopBorder(BitRShiftL(cright_a[i], chrw), thresh_a[i], blur_a[i], i, clip_444, clip_420, cloc), Crop(0, cright_crop, 0, 0)).TurnRight()
+                }
                 else { TurnRight() }
-                
+
                 if (i == 1) { uplane = last }
                 else { vplane = last }
             }
@@ -260,19 +288,19 @@ Function BalanceBorders(clip c, val "cTop", val "cBottom", val "cLeft", val "cRi
             else { vplane = last }
         }
     }
-    
+
     return CombinePlanes(yplane, uplane, vplane, planes="YUV", sample_clip=c)
 }
 
 function BalanceTopBorder(clip c, int cTop, float thresh, int blur, int plane, bool clip_444, bool clip_420, string cloc)
-{   
+{
     cWidth = c.width
     cHeight = c.height
     cTop = min(cTop,cHeight-1)
     blurWidth = max(4,floor(cWidth/blur))
 
     c2 = c.z_PointResize(cWidth * 2, cHeight * 2)
-    
+
     c2.\
     Crop(0, cTop * 2, cWidth * 2, 2)
     z_PointResize(cWidth * 2, cTop * 2)
@@ -280,19 +308,19 @@ function BalanceTopBorder(clip c, int cTop, float thresh, int blur, int plane, b
     Blur(1.5,0.1)
     z_BilinearResize(cWidth * 2, cTop * 2)
     referenceBlur = last
-    
+
     original = c2.Crop(0, 0, cWidth * 2, cTop * 2)
-    
+
     original
     z_BilinearResize(blurWidth * 2, cTop * 2)
     Blur(1.5,0.1)
     z_BilinearResize(cWidth * 2, cTop * 2)
     originalBlur = last
-    
+
     if (plane == 0)
     {
         Expr(original, originalBlur, referenceBlur, "z y - "+ String(thresh) +" scaleb > x "+ String(thresh) +" scaleb + z y - "+ String(-thresh) +" scaleb < x "+ String(thresh) +" scaleb - z y - x + ? ? 16 scaleb 235 scaleb clip")
-        
+
         StackVertical(last, c2.Crop(0, cTop * 2, cWidth * 2, (cHeight - cTop) * 2))
         z_PointResize(cWidth, cHeight)
     }
@@ -300,7 +328,7 @@ function BalanceTopBorder(clip c, int cTop, float thresh, int blur, int plane, b
     {
         if (BitsPerComponent(c) == 32) { Expr(original, originalBlur, referenceBlur, "z y - "+ String(thresh) +" 128 - scaleb 0.5 + > x "+ String(thresh) +" 128 - scaleb 0.5 + + z y - "+ String(-thresh) +" 128 - scaleb 0.5 + < x "+ String(thresh) +" 128 - scaleb 0.5 + - z y - x + ? ? -0.43921568627 0.43921568627 clip") }
         else { Expr(original, originalBlur, referenceBlur, "z y - "+ String(thresh) +" scaleb > x "+ String(thresh) +" scaleb + z y - "+ String(-thresh) +" scaleb < x "+ String(thresh) +" scaleb - z y - x + ? ? 16 scaleb 240 scaleb clip") }
-        
+
         StackVertical(last, c2.Crop(0, cTop * 2, cWidth * 2, (cHeight - cTop) * 2))
         chroma_shift_balanceborders(clip_444, clip_420, cloc)
     }
