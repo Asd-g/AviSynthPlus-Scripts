@@ -5,12 +5,12 @@ This function is a port of the VapourSynth retinex_edgemask - https://github.com
 */
 
 
-### Requirements - AviSynth+ >= r3442, Kirsch, vsTCanny, Retinex.
+### Requirements - AviSynth+ 3.6+, Kirsch, vsTCanny, Retinex.
 
 
 ### Usage ###
 ###
-# retinex_edgemask(clip c, float "sigma", int_array "sigma1", float "upper_thr")
+# retinex_edgemask(clip c, float "sigma", val "sigma1", float "upper_thr")
 ###
 ## Parameters ##
 #---------------
@@ -29,13 +29,10 @@ This function is a port of the VapourSynth retinex_edgemask - https://github.com
 
 ### Changelog ###
 #---------------
-# Changed type of parameter sigma1.
-# Changed the required AviSynth+ version.
-#---------------
 # Initial version.
 
 
-Function retinex_edgemask(clip c, float "sigma", int_array "sigma1", float "upper_thr")
+Function retinex_edgemask(clip c, float "sigma", val "sigma1", float "upper_thr")
 {
     Assert(!IsRGB(c) && ComponentSize(c) < 4, "retinex_edgemask: clip must be in Y/YUV 8..16-bit planar format.")
     
@@ -48,5 +45,6 @@ Function retinex_edgemask(clip c, float "sigma", int_array "sigma1", float "uppe
     vsTCanny(sigmaY=sigma, sigma_vY=sigma, mode=1)
     Expr("x[-1,-1] x[1,-1] min x[0,0] min x[-1,1] min x[1,1] min")
     
-    return Expr(Kirsch(luma), last, "x y + "+ String(BitLShift(1, BitsPerComponent()) - 1) +" min")
+    peak = BitLShift(1, BitsPerComponent()) - 1
+    return Expr(Kirsch(luma), last, "x y + "+ String(peak) +" min")
 }
