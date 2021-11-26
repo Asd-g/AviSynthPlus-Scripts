@@ -5,8 +5,7 @@
 - AnimeMask - port of VapourSynth AnimeMask.
 - AnimeMask2 - port of VapourSynth AnimeMask2.
 - AutoResize_ - intelligent resize/crop to 1080p, 720p, SD (720px wide) or any custom resolution.
-- balanceborders_ - it fixes dirty lines on the borders.
-- bbmod_ - balanceborders mod that using division instead subtraction for the filtering.
+- bborders - it fixes dirty lines on the borders.
 - bbmodY - apply bbmod from random column and row.
 - bt2390_pq - tone mapping based on BT.2390 (PQ).
 - ChromaShiftSP2_ - high bit depth support.
