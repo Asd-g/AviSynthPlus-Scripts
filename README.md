@@ -23,7 +23,6 @@
 - MDSI - port of the VapourSynth MDSI.
 - MCTD_ - see the changelog in the script.
 - Offset_video_ - see the changelog in the script.
-- Prewitt - Prewitt algorithm for edge mask.
 - rainbow_smooth2 - see the changelog in the script.
 - retinex_edgemask.
 - RoundHalfToEven.
