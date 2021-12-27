@@ -18,7 +18,6 @@
 - Fixer - a wrapper of EdgeFixer.
 - GMSD - port of the VapourSynth GMSD.
 - IQA_downsample - downsampler for image quality assessment model.
-- Kirsch - Kirsch algorithm for edge mask.
 - LWLInfo - script displaying LSMASHSource/FFMS2/D2VSource frame properties.
 - MDSI - port of the VapourSynth MDSI.
 - MCTD_ - see the changelog in the script.
