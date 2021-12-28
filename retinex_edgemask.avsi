@@ -5,7 +5,7 @@ This function is a port of the VapourSynth retinex_edgemask - https://github.com
 */
 
 
-### Requirements - AviSynth+ 3.6+, Kirsch, vsTCanny, Retinex.
+### Requirements - AviSynth+ 3.6+, vsTCanny, Retinex.
 
 
 ### Usage ###
@@ -29,6 +29,8 @@ This function is a port of the VapourSynth retinex_edgemask - https://github.com
 
 ### Changelog ###
 #---------------
+# Replaced Kirsch with vsTCanny(sigmaY=0, mode=1, op=5)
+#---------------
 # Initial version.
 
 
@@ -45,5 +47,5 @@ Function retinex_edgemask(clip c, float "sigma", val "sigma1", float "upper_thr"
     vsTCanny(sigmaY=sigma, sigma_vY=sigma, mode=1)
     Expr("x[-1,-1] x[1,-1] min x[0,0] min x[-1,1] min x[1,1] min")
 
-    return Expr(Kirsch(luma), last, "x y + "+ String(BitLShift(1, BitsPerComponent()) - 1) +" min")
+    return Expr(vsTCanny(luma, sigmaY=0, mode=1, op=5), last, "x y + "+ String(BitLShift(1, BitsPerComponent()) - 1) +" min")
 }
