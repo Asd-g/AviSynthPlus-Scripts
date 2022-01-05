@@ -12,13 +12,13 @@
 ###
 ###
 ###
-### /!\ Needed filters: MVTools (v2.5.11.3/v2.6.0.4), MaskTools (v2.0a48),
-### ------------------- LSFmod (v1.9), FFT3Dgpu (v0.8.2) or FFT3Dfilter (v2.1.1),
-###                     TTempsmooth (v0.9.4), RemoveGrain + Repair (v1.0PR),
-###                     Deblock (v1.2), Deblock_QED (29.Nov.2011), DctFilter (v0.0.1.4),
-###                     EEDI2 (v0.9.2), SangNom (v1.0beta),
-###                     GradFun2DBmod (v1.5), GradFun2db (v1.0), AddGrainC (v1.6.1),
-###                     Dither(v1.18.1).
+### /!\ Needed filters: MVTools2, MaskTools2,
+### ------------------- LSFmod, FFT3Dgpu or FFT3Dfilter,
+###                     vsTTempsmooth, RemoveGrain + Repair,
+###                     Deblock, Deblock_QED, DctFilter,
+###                     EEDI2, SangNom2,
+###                     GradFun3DBmod (v1.5), GradFun3, AddGrainC,
+###                     Dither.
 ###
 ###
 ###
@@ -49,7 +49,7 @@
 ### | radius     : Temporal radius [1...6]                                                                |
 ### | sigma      : FFT3D sigma for the pre-filtering clip [0=no pre-filtering,1...]                       |
 ### | twopass    : Do the denoising job in 2 stages (stronger but very slow)                              |
-### | useTTmpSm  : Use MDegrain (faster) or MCompensate+TTempsmooth (stronger)                            |
+### | useTTmpSm  : Use MDegrain (faster) or MCompensate+vsTTempsmooth (stronger)                            |
 ### | limit      : Limit the effect of the first denoising [-2=luma-adaptive-auto,-1=auto,0=off,1...255]  |
 ### | limitC     : Limit the effect of the first denoising on chroma planes                    +--same--+ |
 ### | limit2     : Limit the effect of the second denoising (if twopass=true)                  |   as   | |
@@ -63,8 +63,8 @@
 ### | pMode      : pre-filter mode (0 = off                                                               |
 ### |                               1 = Luma-adaptive prefilter to bias to protect dark edges             |
 ### |                               2 = 1 plus expanding TV range to PC range for easier motion estimate) |
-### | p1nr       : Use your own denoising filter instead of internal MDegrain/TTempsmooth in the 1st pass |
-### | p2nr       : Use your own denoising filter instead of internal MDegrain/TTempsmooth in the 2nd pass |
+### | p1nr       : Use your own denoising filter instead of internal MDegrain/vsTTempsmooth in the 1st pass |
+### | p2nr       : Use your own denoising filter instead of internal MDegrain/vsTTempsmooth in the 2nd pass |
 ### | ppnr       : Use your own denoising filter instead of internal FFT3D in post-denoising              |
 ### |              (Set your filter in string, e.g., p1nr="FluxSmoothST(7, 7)")                           |
 ### +-----------------------------------------------------------------------------------------------------+
@@ -148,12 +148,12 @@
 ### +---------+
 ### | ENHANCE |
 ### +---------+-----------------------------------------------------------------------------------------------------------------------------------------------------------+
-### | enhance : Enable GradFun2DBmod post processing to enhance flat areas (may avoid banding & blocking when encoding too)                                               |
+### | enhance : Enable GradFun3DBmod post processing to enhance flat areas (may avoid banding & blocking when encoding too)                                               |
 ### | GFthr   : Gradfun2db threshold [1.0=off,...]                                                                                                                        |
 ### | AGstr   : AddGrain strength  [0.0=off,...]                                                                                                                          |
 ### | bias    : Brightness bias for adaptative grain mask (the higher, the less grain in dark areas & the more grain in bright areas) [-1=off,0=input,1...254,255=invert] |
 ### | temp    : Temporal stabilization for grain (the higher, the more calm) [0=nervous,...,100=static]                                                                   |
-### | dbF     : Use your own debanding filter instead of internal GradFun2dbmod (Set your filter in string, e.g., dbF="f3kdb(31, 32, 0, 0)")                              |
+### | dbF     : Use your own debanding filter instead of internal GradFun3dbmod (Set your filter in string, e.g., dbF="f3kdb(31, 32, 0, 0)")                              |
 ### |             - filter with stacked 16-bit output is allowed, e.g., dbF="f3kdb(output_depth=16, output_mode=1)"                                                       |
 ### +---------------------------------------------------------------------------------------------------------------------------------------------------------------------+
 ###
@@ -345,7 +345,7 @@
 ### This is the post-processor used internally in MCTD.
 ### It can be called externally if you want some specific functionality without denoising.
 ###
-### Parameters & defaults are the same as MCTD. 
+### Parameters & defaults are the same as MCTD.
 ### By default, all filters are OFF!
 ###
 ### "Sharp" & "Protect" options need 2 inputs:
@@ -358,6 +358,11 @@
 ###
 ### CHANGELOG:
 ### ----------
+###
+### Fixed the high bit depth processing
+### Replaced GradFun2DBmod with GradFun3DBmod
+###
+### Changed the names of the internal conflicted functions (realfinder)
 ###
 ### Added support for 10..16-bit clips.
 ###
@@ -416,7 +421,7 @@
 ### v1.4.18 : fixed anti-aliasing PP (was broken since v1.4.07)
 ###           updated MVTools-MaskTools-AddgrainC version
 ###
-### v1.4.16 : added switch to avoid loading of unused filters 
+### v1.4.16 : added switch to avoid loading of unused filters
 ###           fixed a bug in anti-aliasing part
 ###
 ### v1.4.08 : fixed MOD16 warning when deblock=true
@@ -497,7 +502,7 @@
 ###           added check/warning for some settings
 ###           added thSAD2 & limit2 parameters for twopass=true
 ###           added overrange parameter for controling sharpness (useful for sharpening more than the source)
-###           changed +- much code to implement twopass/MDegrain/MT, should be bug free (I hope) 
+###           changed +- much code to implement twopass/MDegrain/MT, should be bug free (I hope)
 ###           changed sharp->MVsharp & post->sharp
 ###           changed "light Smode4" --> LimitedSharpenFaster for sharp=2 (strength,Smode,overshoot)
 ###           reduced max radius to 6
@@ -571,7 +576,7 @@ settings     = Default(settings, "low")
 useMMask     = Default(useMMask,  true)
 pp           = Default(pp,        true)
 settings_num =  -1
-settings_num = (settings == "very low")  ? 0 : settings_num 
+settings_num = (settings == "very low")  ? 0 : settings_num
 settings_num = (settings == "low")       ? 1 : settings_num
 settings_num = (settings == "medium")    ? 2 : settings_num
 settings_num = (settings == "high")      ? 3 : settings_num
@@ -810,11 +815,11 @@ i   = i.pointresize(xn,yn,-xf/2,-yf/2,xn,yn)
 m4 = ((int(xi/4.0)*4==xi)&&(int(yi/4.0)*4==yi)) ? true : false
 Assert( m4 ? true : false, chr(10) + "This is not a MOD4 clip! Please use crop() or addborders() before using MCTD()" + chr(10))
 
-bits_8 = BitsPerComponent(i) == 8
-prefiltering_gradfun3 = bits_8 ? i.FFT3Dfilter(sigma=sigma*0.8,sigma2=sigma*0.6,sigma3=sigma*0.4,sigma4=sigma*0.2,bw=bwbh,bh=bwbh,ow=owoh,oh=owoh,plane=chroma?4:0,bt=bt,ncpu=ncpu).GradFun3(thr=0.25 + sigma * 0.05) : \
-i.FFT3Dfilter(sigma=sigma*0.8,sigma2=sigma*0.6,sigma3=sigma*0.4,sigma4=sigma*0.2,bw=bwbh,bh=bwbh,ow=owoh,oh=owoh,plane=chroma?4:0,bt=bt,ncpu=ncpu).ConvertBits(16).ConvertToStacked().GradFun3(thr=0.25 + sigma * 0.05).ConvertFromStacked().ConvertBits(BitsPerComponent(i))
+bits_8 = (ComponentSize(i) == 1)
+prefiltering_gradfun3 = bits_8 ? i.FFT3Dfilter(sigma=sigma*0.8,sigma2=sigma*0.6,sigma3=sigma*0.4,sigma4=sigma*0.2,bw=bwbh,bh=bwbh,ow=owoh,oh=owoh,plane=chroma?4:0,bt=bt,ncpu=ncpu).GradFun3(thr=0.31 + sigma * 0.05) : \
+i.FFT3Dfilter(sigma=sigma*0.8,sigma2=sigma*0.6,sigma3=sigma*0.4,sigma4=sigma*0.2,bw=bwbh,bh=bwbh,ow=owoh,oh=owoh,plane=chroma?4:0,bt=bt,ncpu=ncpu).ConvertBits(16).ConvertToStacked().GradFun3(thr=0.31 + sigma * 0.05, lsb=true, lsb_in=true).ConvertFromStacked().ConvertBits(BitsPerComponent(i))
 
-Assert( !bits_8 && GPU == true ? false : true, chr(10) + "The clip must be 8-bit in order to use GPU." + chr(10))
+Assert( (!bits_8 && GPU == true) ? false : true, chr(10) + "The clip must be 8-bit in order to use GPU." + chr(10))
 
 ### PREFILTERING
 p = defined(p)                   ? p.pointresize(xn,yn,-xf/2,-yf/2,xn,yn)
@@ -823,7 +828,7 @@ p = defined(p)                   ? p.pointresize(xn,yn,-xf/2,-yf/2,xn,yn)
 \ : (GPU==false&&fixband==false) ? i.FFT3Dfilter(sigma=sigma*0.8,sigma2=sigma*0.6,sigma3=sigma*0.4,sigma4=sigma*0.2,bw=bwbh,bh=bwbh,ow=owoh,oh=owoh,plane=chroma?4:0,bt=bt,ncpu=ncpu)
 \ : (GPU==true &&fixband==false) ? i.FFT3Dgpu(sigma=sigma*0.8,sigma2=sigma*0.6,sigma3=sigma*0.4,sigma4=sigma*0.2,bw=bwbh,bh=bwbh,ow=owoh,oh=owoh,plane=chroma?4:0,bt=bt,precision=precision)
 \ : (GPU==false&&fixband==true ) ? prefiltering_gradfun3
-\ :                                i.FFT3Dgpu(sigma=sigma*0.8,sigma2=sigma*0.6,sigma3=sigma*0.4,sigma4=sigma*0.2,bw=bwbh,bh=bwbh,ow=owoh,oh=owoh,plane=chroma?4:0,bt=bt,precision=precision).GradFun3(thr=0.25 + sigma * 0.05)
+\ :                                i.FFT3Dgpu(sigma=sigma*0.8,sigma2=sigma*0.6,sigma3=sigma*0.4,sigma4=sigma*0.2,bw=bwbh,bh=bwbh,ow=owoh,oh=owoh,plane=chroma?4:0,bt=bt,precision=precision).GradFun3(thr=0.31 + sigma * 0.05)
 
 
 ### DEBLOCKING
@@ -837,12 +842,15 @@ d  = (deblock==false) ? i
 
 ### PREPARING
 nullclip = Blankclip()
-bits_scale = BitLShift(1, BitsPerComponent(i) - 8)
-full_scale = Float(BitLShift(1, BitsPerComponent(i)) - 1)
+range = BitLShift(1, BitsPerComponent(i))
+half = BitShr(range, 1)
+peak = Float(range - 1)
 
-lmsk = p.mt_lut("x " + string(bias) + " scaleb - abs " + string( bias * bits_scale >= 128 * bits_scale ? full_scale / bias * bits_scale : full_scale / ( full_scale - bias * bits_scale ) ) + " *", U=1, V=1)
+bias_ = (bits_8) ? bias : Round(bias * peak / 255)
+
+lmsk = p.mt_lut("x " + string(bias_) + " - abs " + string( bias_ >= half ? peak / bias_  : peak / ( peak - bias_ ) ) + " *", U=1, V=1)
 pAdp = mt_merge(i, p, lmsk, luma=chroma, U=chr31, V=chr31)
-mAdp = mt_merge(p, i, i.mt_lut("x 16 scaleb < 255 scalef x 75 scaleb > 0 255 scalef x 16 scaleb - 255 scalef 75 scaleb 16 scaleb - / * - ? ?", U=1, V=1), luma=chroma, U=chr31, V=chr31)
+mAdp = mt_merge(p, i, i.mt_lut("x ymin < range_max x 75 scalef > 0 range_max x ymin - range_max 75 scalef ymin - / * - ? ?", U=1, V=1), luma=chroma, U=chr31, V=chr31)
 
 pReb = pMode == 2 ? mAdp.MCTD_Luma_Rebuild(S0=2., c=0.0625, uv=chr31) /* 2: mReb for MC */
 \    : pMode == 1 ? mAdp                                              /* 1: mAdp for MC */
@@ -938,7 +946,7 @@ b6v = !refine || (radius<6) ? b6v
    f4c = (radius>=4)  ? i.MCompensate(iMVS, f4v, thSAD=thSAD, thSCD1=thSCD1, thSCD2=thSCD2) : nullclip
    f5c = (radius>=5)  ? i.MCompensate(iMVS, f5v, thSAD=thSAD, thSCD1=thSCD1, thSCD2=thSCD2) : nullclip
    f6c = (radius>=6)  ? i.MCompensate(iMVS, f6v, thSAD=thSAD, thSCD1=thSCD1, thSCD2=thSCD2) : nullclip
-   
+
    c = (radius==6) ? interleave(f6c, f5c, f4c, f3c, f2c, f1c, i, b1c, b2c, b3c, b4c, b5c, b6c)
    \ : (radius==5) ? interleave(     f5c, f4c, f3c, f2c, f1c, i, b1c, b2c, b3c, b4c, b5c     )
    \ : (radius==4) ? interleave(          f4c, f3c, f2c, f1c, i, b1c, b2c, b3c, b4c          )
@@ -950,7 +958,7 @@ b6v = !refine || (radius<6) ? b6v
    sm = Defined(cnr) ? Eval("c."+cnr)
    \  : c.vsTTempSmooth(radius,255,255,255,1,1,1,strength=radius+1,pfclip=SAD_m,fp=false,scthresh=99.9)
    sm = sm.SelectEvery(1+radius*2,radius)
-   
+
    return sm
    }
 
@@ -979,7 +987,7 @@ b6v = !refine || (radius<6) ? b6v
          mv45  = (radius==5) ? i.MDegrain2(iMVS, b4v, f4v, b5v, f5v,           thSAD=thSAD, thSCD1=thSCD1, thSCD2=thSCD2, plane=chroma?4:0) : nullclip
          mv123 = (radius>=5) ? i.MDegrain3(iMVS, b1v, f1v, b2v, f2v, b3v, f3v, thSAD=thSAD, thSCD1=thSCD1, thSCD2=thSCD2, plane=chroma?4:0) : nullclip
          mv456 = (radius==6) ? i.MDegrain3(iMVS, b4v, f4v, b5v, f5v, b6v, f6v, thSAD=thSAD, thSCD1=thSCD1, thSCD2=thSCD2, plane=chroma?4:0) : nullclip
-   
+
          sm = (radius==1) ? i.MDegrain1(iMVS, b1v, f1v,                     thSAD=thSAD, thSCD1=thSCD1, thSCD2=thSCD2, plane=chroma?4:0)
          \  : (radius==2) ? i.MDegrain2(iMVS, b1v, f1v, b2v, f2v,           thSAD=thSAD, thSCD1=thSCD1, thSCD2=thSCD2, plane=chroma?4:0)
          \  : (radius==3) ? i.MDegrain3(iMVS, b1v, f1v, b2v, f2v, b3v, f3v, thSAD=thSAD, thSCD1=thSCD1, thSCD2=thSCD2, plane=chroma?4:0)
@@ -1041,15 +1049,15 @@ d_chr31 = lchr ? chr31 : 1
 l_chr31 = lchr && ( limit == 0 || ( limit > 0 && limitC > 0 ) || limit == limitC ) ? 3 : 1
 
 smD = mt_makediff(i,sm,Y=l_lmr31,U=d_chr31,V=d_chr31)             # Only skip when !chroma or limitC == 0
-DD  = (limit<0) ? mt_lutxy(limit==-1?pD:pDa,smD,"x 128 scaleb - abs y 128 scaleb - abs < x y ?",Y=l_lmr31,U=l_chr31,V=l_chr31)
+DD  = (limit<0) ? mt_lutxy(limit==-1?pD:pDa,smD,"x range_half - abs y range_half - abs < x y ?",Y=l_lmr31,U=l_chr31,V=l_chr31,use_expr=1)
 \   : (limit>0) ? mt_lutxy(sm,i,yexpr="x y - abs "+string(limit)+" scalef <= x x y - 0 < y "+string(limit)+" scalef - y "+string(limit)+" scalef + ? ?",
 \                                expr=(limitC>0)?("x y - abs "+string(limitC)+" scalef <= x x y - 0 < y "+string(limitC)+" scalef - y "+string(limitC)+" scalef + ? ?"):("x"),
-\                                Y=l_lmr31,U=l_chr31,V=l_chr31)
+\                                Y=l_lmr31,U=l_chr31,V=l_chr31,use_expr=1)
 \   :             sm
 smL = (limit<0) ? i.mt_makediff(DD,Y=l_lmr31,U=l_chr31,V=l_chr31) : DD
 
-DDc  = (limitC<0) ? mt_lutxy(limitC==-1?pDc:pDac,smD,"x 128 scaleb - abs y 128 scaleb - abs < x y ?",Y=1,U=3,V=3)
-\    : (limitC>0) ? mt_lutxy(sm,i,"x y - abs "+string(limitC)+" scalef <= x x y - 0 < y "+string(limitC)+" scalef - y "+string(limitC)+" scalef + ? ?",Y=1,U=3,V=3)
+DDc  = (limitC<0) ? mt_lutxy(limitC==-1?pDc:pDac,smD,"x range_half - abs y range_half - abs < x y ?",Y=1,U=3,V=3,use_expr=1)
+\    : (limitC>0) ? mt_lutxy(sm,i,"x y - abs "+string(limitC)+" scalef <= x x y - 0 < y "+string(limitC)+" scalef - y "+string(limitC)+" scalef + ? ?",Y=1,U=3,V=3,use_expr=1)
 \    :              sm
 smLc = (limitC<0) ? i.mt_makediff(DDc,Y=1,U=3,V=3) : DDc
 
@@ -1108,17 +1116,17 @@ d_chr31 = lchr ? chr31 : 1
 l_chr31 = lchr && ( limit2 == 0 || ( limit2 > 0 && limitC2 > 0 ) || limit2 == limitC2 ) ? 3 : 1
 
 smD = twopass ? mt_makediff(i,sm,Y=l_lmr31,U=d_chr31,V=d_chr31) : nullclip
-DD  = (twopass && limit2<0) ? mt_lutxy(limit2==-1?pD:pDa,smD,"x 128 scaleb - abs y 128 scaleb - abs < x y ?",Y=l_lmr31,U=l_chr31,V=l_chr31)
+DD  = (twopass && limit2<0) ? mt_lutxy(limit2==-1?pD:pDa,smD,"x range_half - abs y range_half - abs < x y ?",Y=l_lmr31,U=l_chr31,V=l_chr31,use_expr=1)
 \   : (twopass && limit2>0) ? mt_lutxy(sm,i,yexpr="x y - abs "+string(limit2)+" scalef <= x x y - 0 < y "+string(limit2)+" scalef - y "+string(limit2)+" scalef + ? ?",
 \                                           expr=(limitC2>0)?("x y - abs "+string(limitC2)+" scalef <= x x y - 0 < y "+string(limitC2)+" scalef - y "+string(limitC2)+" scalef + ? ?"):("x"),
-\                                           Y=l_lmr31,U=l_chr31,V=l_chr31)
+\                                           Y=l_lmr31,U=l_chr31,V=l_chr31,use_expr=1)
 \   :                         sm
 
 smL = (!twopass) ? smL
 \   : (limit2<0) ? i.mt_makediff(DD,Y=l_lmr31,U=l_chr31,V=l_chr31) : DD
 
-DDc  = (twopass && limitC2<0) ? mt_lutxy(limitC2==-1?pDc:pDac,smD,"x 128 scaleb - abs y 128 scaleb - abs < x y ?",Y=1,U=3,V=3)
-\    : (twopass && limitC2>0) ? mt_lutxy(sm,i,"x y - abs "+string(limitC2)+" scalef <= x x y - 0 < y "+string(limitC2)+" scalef - y "+string(limitC2)+" scalef + ? ?",Y=1,U=3,V=3)
+DDc  = (twopass && limitC2<0) ? mt_lutxy(limitC2==-1?pDc:pDac,smD,"x range_half - abs y range_half - abs < x y ?",Y=1,U=3,V=3,use_expr=1)
+\    : (twopass && limitC2>0) ? mt_lutxy(sm,i,"x y - abs "+string(limitC2)+" scalef <= x x y - 0 < y "+string(limitC2)+" scalef - y "+string(limitC2)+" scalef + ? ?",Y=1,U=3,V=3,use_expr=1)
 \    :                          sm
 smLc = (twopass && limitC2<0) ? i.mt_makediff(DDc,Y=1,U=3,V=3) : DDc
 
@@ -1136,8 +1144,8 @@ smP = (post==0)    ? smL
 \   : (GPU==false) ? smL.FFT3Dfilter(sigma=post_abs*0.8,sigma2=post_abs*0.6,sigma3=post_abs*0.4,sigma4=post_abs*0.2,bw=bwbh,bh=bwbh,ow=owoh,oh=owoh,plane=chroma?4:0,bt=bt,ncpu=ncpu)
 \   :                smL.FFT3Dgpu(sigma=post_abs*0.8,sigma2=post_abs*0.6,sigma3=post_abs*0.4,sigma4=post_abs*0.2,bw=bwbh,bh=bwbh,ow=owoh,oh=owoh,plane=chroma?4:0,bt=bt,precision=precision)
 
-post_denoising_gradfun3 = bits_8 ? mt_makediff(smL,mt_makediff(smL,smP,U=chr31,V=chr31).GradFun3(thr=0.25 + post * 0.5),U=chr31,V=chr31) : \
-mt_makediff(smL,mt_makediff(smL,smP,U=chr31,V=chr31).ConvertBits(16).ConvertToStacked().GradFun3(thr=0.25 + post * 0.5).ConvertFromStacked().ConvertBits(BitsPerComponent(smL)),U=chr31,V=chr31)
+post_denoising_gradfun3 = (bits_8) ? mt_makediff(smL,mt_makediff(smL,smP,U=chr31,V=chr31).GradFun3(thr=0.31 + post * 0.5),U=chr31,V=chr31) : \
+mt_makediff(smL,mt_makediff(smL,smP,U=chr31,V=chr31).ConvertBits(16).ConvertToStacked().GradFun3(thr=0.31 + post * 0.5, lsb=true, lsb_in=true).ConvertFromStacked().ConvertBits(BitsPerComponent(smL)),U=chr31,V=chr31)
 
 smP = (post==0)        ? smP
 \   : ( fixband==false || post<0 ) ? smP
@@ -1150,7 +1158,7 @@ smP = (post==0)        ? smP
    \                 bool "sharp", bool "adapt", int "strength", int "SHmode", int "SHmethod", int "Slimit", int "Sovershoot", bool "Tlimit", int "Tovershoot", val "ssource", string "shF",
    \                 bool "protect", int "cutoff", int "threshold", int "maxdiff",
    \                 bool "AA", bool "useEEDI2", float "reduc", int "maxd", int "AAthr", int "method", string "aaF",
-   \                 bool "deblock", bool "useQED", int "quant1", int "quant2",          
+   \                 bool "deblock", bool "useQED", int "quant1", int "quant2",
    \                 bool "edgeclean", int "ECrad", int "ECthr", string "ECmode",
    \                 bool "stabilize", int "maxr", int "lthresh", int "cthresh", int "TTstr", string "stF",
    \                 bool "enhance", float "GFthr", float "AGstr", int "bias", int "temp", string "dbF",
@@ -1160,7 +1168,7 @@ smP = (post==0)        ? smP
    ### SETTINGS
    settings     = Default(settings, "low")
    settings_num =  -1
-   settings_num = (settings == "very low")  ? 0 : settings_num 
+   settings_num = (settings == "very low")  ? 0 : settings_num
    settings_num = (settings == "low")       ? 1 : settings_num
    settings_num = (settings == "medium")    ? 2 : settings_num
    settings_num = (settings == "high")      ? 3 : settings_num
@@ -1301,7 +1309,7 @@ smP = (post==0)        ? smP
    rg17 = (protect==true) ? smP.removegrain(17,-1) : NOP()
    iOB  = (protect==true) ? i.mt_lut("x "+string(cutoff)+" scalef >= x 0 ?",U=1,V=1) : NOP()
    mB   = (protect==true) ? mt_makediff(iOB,rg17,U=1,V=1).mt_binarize(128+threshold,upper=false,U=1,V=1).removegrain(5,-1) : NOP()
-   lB   = (protect==true) ? mt_lutxy(smP,i,"x y - abs "+string(maxdiff)+" scalef <= x x y - 0 < y "+string(maxdiff)+" scalef - x ? ?",U=1,V=1) : NOP()
+   lB   = (protect==true) ? mt_lutxy(smP,i,"x y - abs "+string(maxdiff)+" scalef <= x x y - 0 < y "+string(maxdiff)+" scalef - x ? ?",U=1,V=1,use_expr=1) : NOP()
    smB  = (protect==true) ? mt_merge(smP,lB,mB,U=chr21,V=chr21) : smP
 
 
@@ -1314,13 +1322,13 @@ smP = (post==0)        ? smP
    \   : (method==1)      ? cAA.Spline36resize(xn,yn,0.5,-0.5,xn*2,yn*2)
    \   :                    cAA.Lanczos4resize(xn,yn,0.5,-0.5,xn*2,yn*2)
    cAA = (aaF!="internal") ? Eval("smB."+aaF) : cAA
-   mA  = (AA==true) ? smB.mt_edge("prewitt",0,255,0,0,V=1,U=1).mt_lut("x "+string(AAthr)+" scalef <= 0 x bits_scale / 1.4 ^ bits_scale *?",U=1,V=1).removegrain(4,-1).mt_inflate(U=1,V=1) : NOP()
+   mA  = (AA==true) ? smB.mt_edge("prewitt",0,255,0,0,V=1,U=1).mt_lut("x "+string(AAthr)+" scalef <= 0 x 1.4 ^ ?",U=1,V=1).removegrain(4,-1).mt_inflate(U=1,V=1) : NOP()
    smA = (AA==true) ? mt_merge(smB,cAA,mA,luma=chroma?true:false,U=chr31,V=chr31) : NOP()
 
    aaD1    = (AA==true&&reduc!=-1) ? mt_makediff(smB, smA, U=1, V=1) : NOP()
-   aaD1MVS = (AA==true&&reduc!=-1) ? aaD1.MSuper(hpad=0,vpad=0,pel=pel,sharp=MVsharp,levels=1,chroma=false) : NOP()              
+   aaD1MVS = (AA==true&&reduc!=-1) ? aaD1.MSuper(hpad=0,vpad=0,pel=pel,sharp=MVsharp,levels=1,chroma=false) : NOP()
    aaD2    = (AA==true&&reduc!=-1) ? aaD1.MDegrain1(aaD1MVS, b1v, f1v, thSAD=thSAD, thSCD1=thSCD1, thSCD2=thSCD2, plane=0) : NOP()
-   aaD2    = (AA==true&&reduc!=-1) ? mt_lutxy(aaD1, aaD2, "x 128 scaleb - abs y 128 scaleb - abs < x y ?", U=1, V=1).mergeluma(aaD2, 1.0-reduc) : NOP()
+   aaD2    = (AA==true&&reduc!=-1) ? mt_lutxy(aaD1, aaD2, "x range_half - abs y range_half - abs < x y ?", U=1, V=1).mergeluma(aaD2, 1.0-reduc,use_expr=1) : NOP()
 
    smA     = (AA==false) ? smB
    \       : (reduc==-1) ? smA
@@ -1330,13 +1338,13 @@ smP = (post==0)        ? smP
    ### EDGECLEANING
    mP  = (edgeclean==true) ? mt_edge(smA,"prewitt",0,255,0,0,V=1,U=1) : NOP()
    mS  = (edgeclean==true) ? mP.mt_expand(mode=mt_square(radius=ECrad),U=1,V=1).mt_inflate(U=1,V=1) : NOP()
-   mD  = (edgeclean==true) ? mt_lutxy(mS,mP.mt_inflate(U=1,V=1),"x y - "+string(ECthr)+" scalef <= 0 x y - ?",U=1,V=1).mt_inflate(U=1,V=1).removegrain(20,-1) : NOP()
+   mD  = (edgeclean==true) ? mt_lutxy(mS,mP.mt_inflate(U=1,V=1),"x y - "+string(ECthr)+" scalef <= 0 x y - ?",U=1,V=1,use_expr=1).mt_inflate(U=1,V=1).removegrain(20,-1) : NOP()
    smE = (edgeclean==true) ? mt_merge(smA,Eval("smA." + ECmode),mD,luma=chroma?true:false,U=chr31,V=chr31) : smA
 
 
    ### MASKING
-   mM = (sharp==true||enhance==true||stabilize==true) ? mt_average(SAD_f1m,SAD_b1m,U=1,V=1).mt_lut(expr="x bits_scale / 1.6 ^ bits_scale *",U=1,V=1) : NOP()
-   mE = (sharp==true||enhance==true||stabilize==true) ? mt_edge(smE,"prewitt",0,255,0,0,V=1,U=1).mt_lut(expr="x bits_scale / 1.8 ^ bits_scale *",U=1,V=1).removegrain(4,-1).mt_inflate(U=1,V=1) : NOP()
+   mM = (sharp==true||enhance==true||stabilize==true) ? mt_average(SAD_f1m,SAD_b1m,U=1,V=1).mt_lut(expr="x 1.6 ^",U=1,V=1) : NOP()
+   mE = (sharp==true||enhance==true||stabilize==true) ? mt_edge(smE,"prewitt",0,255,0,0,V=1,U=1).mt_lut(expr="x 1.8 ^",U=1,V=1).removegrain(4,-1).mt_inflate(U=1,V=1) : NOP()
    mL = (sharp==true||enhance==true||stabilize==true) ? mt_logic(mM.invert(),mE,"min",U=1,V=1).removegrain(20,-1) : NOP()
    mF = (sharp==true||enhance==true||stabilize==true) ? mt_logic(mM,mE,"max",U=1,V=1).removegrain(20,-1) : NOP()
    mR = (sharp==true||enhance==true||stabilize==true) ? mE.removegrain(20,-1) : NOP()
@@ -1359,15 +1367,12 @@ smP = (post==0)        ? smP
    \                                            : mt_merge(smE,shrp,mR,U=chr21,V=chr21)
    \                                 : shrp.mergechroma(smE)
 
-
-   Assert( BitsPerComponent(denoised) > 8 && enhance == true ? false : true, chr(10) + "The clip must be 8-bit in order to use enhance" + chr(10))
-    
    ### STABILIZING & ENHANCING
    TTc = (stabilize==true) ? (stF!="internal") ? Eval("sL."+stF)
    \   :                     sL.vsTTempSmooth(maxr=maxr, ythresh=lthresh, uthresh=cthresh, vthresh=cthresh, ymdiff=lthresh, umdiff=cthresh, vmdiff=cthresh, strength=TTstr)
    \   :                     sL
    GFc = (enhance==true) ? (dbF!="internal") ? Eval("TTc."+dbF)
-   \   :                   TTc.GradFun2DBmod(thr=GFthr,thrC=chroma?GFthr:1.0,mode=0,str=AGstr,strC=0.0,temp=temp,adapt=bias,mask=false,show=false)
+   \   :                   TTc.GradFun3DBmod(thr=GFthr,thrC=chroma?GFthr:1.0,mode=0,str=AGstr,strC=0.0,temp=temp,adapt=bias,mask=false,show=false)
    \   :                   TTc
    FSc = (enhance==true||stabilize==true) ? useMMask ? MCPP_final_mt_merge(GFc,sL,mF,luma=chroma?true:false,U=chr31,V=chr31)
    \                                                 : MCPP_final_mt_merge(GFc,sL,mR,luma=chroma?true:false,U=chr31,V=chr31)
@@ -1648,14 +1653,15 @@ function MCTD_Luma_Rebuild(clip src, float "s0", float "c",int "uv", bool "lsb",
     s0      = Default(s0,  2.0)
     c       = Default(c,  1.0/16)
 
+    peak = BitLShift(1, BitsPerComponent(src)) - 1
 	k = (s0 - 1) * c
-	t = lsb_in ? "x 4096 - 56064 / 0 1 clip" : "x 16 - 219 / 0 1 clip"
+	t = lsb_in ? "x 4096 - 56064 / 0 1 clip" : "x ymin - 219 scalef / 0 1 clip"
 	e = String(k)+" "+String(1+c)+" "+String((1+c)*c)+" "+t+" "+String(c)
-    \	+" + / - * "+t+" 1 "+String(k)+" - * + "+String(lsb?65536:255)+" *"
+    \	+" + / - * "+t+" 1 "+String(k)+" - * + "+String(lsb?65536:peak)+" *"
 
     src
     lsb ? (lsb_in ? Dither_lut16 (yexpr=e, expr="x 32768 - 32768 * 28672 / 32768 +", y=3, u=uv, v=uv)  : \
                     Dither_lut8  (yexpr=e, expr="x 128 - 32768 * 112 / 32768 +"    , y=3, u=uv, v=uv)) : \
-                    mt_lut       (yexpr=e, expr="x 128 scaleb - 128 scaleb * 112 scaleb / 128 scaleb +"        , y=3, u=uv, v=uv)
+                    mt_lut       (yexpr=e, expr="x range_half - range_half * 112 scalef / range_half +"        , y=3, u=uv, v=uv)
     lsb_out ? last : (lsb ? Ditherpost(mode=mode,u=uv,v=uv) : last)
 }
