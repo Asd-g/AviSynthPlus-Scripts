@@ -17,6 +17,7 @@
 - FixBrightnessProtect3 - it changes the brightness of column/row.
 - Fixer - a wrapper of EdgeFixer.
 - GMSD - port of the VapourSynth GMSD.
+- GradFun3DBmod - based on GradFun2DBmod but it uses GradFun3 and support 10..16-bit clips.
 - IQA_downsample - downsampler for image quality assessment model.
 - LWLInfo - script displaying LSMASHSource/FFMS2/D2VSource frame properties.
 - MDSI - port of the VapourSynth MDSI.
