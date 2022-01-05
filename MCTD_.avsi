@@ -17,7 +17,7 @@
 ###                     vsTTempsmooth, RemoveGrain + Repair,
 ###                     Deblock, Deblock_QED, DctFilter,
 ###                     EEDI2, SangNom2,
-###                     GradFun3DBmod (v1.5), GradFun3, AddGrainC,
+###                     GradFun3DBmod, GradFun3, AddGrainC,
 ###                     Dither.
 ###
 ###
