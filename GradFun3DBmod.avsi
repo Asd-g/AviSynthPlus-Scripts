@@ -11,7 +11,7 @@
 ###
 ###
 ### /!\ Needed filters : AVS+ 3.5 or later, Masktools2, Removegrain,
-### -------------------- GradFun3, AddGrainC.
+### -------------------- GradFun3, AddGrainC, ExTools.
 ###
 ###
 ### USAGE: GradFun3DBmod( thr, thrC, mode,
@@ -116,6 +116,7 @@
 ###
 ### v2.0 : initial version
 ###        added support for 10..16-bit clips
+###        speed improved (> 100%) by replacing mt_luts with ex_luts
 ###
 ###
 ### +---------------+
@@ -302,7 +303,7 @@ grain  = temp<=0   ? grain
 
 AGmask = adapt==0   ? input.removegrain(19,-1)
 \      : adapt==255 ? input.invert().removegrain(19,-1)
-\      :              input.mt_lut("x "+string(adapt)+" scalef - abs range_max * "+string(adapt)+" scalef range_half - abs range_half + /",u=1,v=1).removegrain(19,-1)
+\      :              input.mt_lut("x "+string(adapt)+" scalef - abs range_max * "+string(adapt)+" scalef range_half - abs range_half + /",u=1,v=1, use_expr=1).removegrain(19,-1)
 
 deband = str==0.0 && strC==0.0 ? dither
 \      : adapt==-1             ? grain
@@ -310,8 +311,8 @@ deband = str==0.0 && strC==0.0 ? dither
 
 
 ### MASK
-GFmask = radius==1 ? input.mt_edge(mode="min/max",thY1=0,thY2=255,u=1,v=1).mt_lut(expr="range_max x 1 "+string(range)+" scalef / * 2 ^ /",u=1,v=1).removegrain(19,-1)
-\      :             mt_luts(input,input,mode="range",pixels=mt_square(radius),expr="y",u=1,v=1).mt_lut(expr="range_max x 1 "+string(range)+" scalef / * 2 ^ /",u=1,v=1).removegrain(19,-1)
+GFmask = radius==1 ? input.mt_edge(mode="min/max",thY1=0,thY2=255,u=1,v=1).mt_lut(expr="range_max x 1 "+string(range)+" scalef / * 2 ^ /",u=1,v=1, use_expr=1).removegrain(19,-1)
+\      :             ex_luts(input,input,mode="range",pixels=mt_square(radius),expr="y",uv=1).mt_lut(expr="range_max x 1 "+string(range)+" scalef / * 2 ^ /",u=1,v=1, use_expr=1).removegrain(19,-1)
 
 output = mask==true   ? mt_merge(input,deband,GFmask,luma=chroma?true:false,u=chroma?3:2,v=chroma?3:2)
 \      : chroma==true ? deband
