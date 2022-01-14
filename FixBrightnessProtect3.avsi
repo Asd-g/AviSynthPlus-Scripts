@@ -1,22 +1,59 @@
-## Changelog:
-# - allowed adj_val, prot_val, upper, prot_val2 to be non-array when row/column is array (FixCBr([1,2], 8))
-# - cosmetic changes
-# - added array support for parameters
-# - removed full_range parameter, added float prot_val2 parameter for protecting pixels above and below threshold simultaneously
-# - processing also Y clips
-# - added alias FixRowBrightnessProtect2 / FixColumnBrightnessProtect2 for backward compatibility
-# - added an optional parameter bool "full_range" - it works only for high bit depth; it determines how the scaling to the input bit depth->8-bit->input bit depth is done ( http://avisynth.nl/index.php/MaskTools2#Expression_syntax_supporting_bit_depth_independent_expressions )
-# - added "upper" option (default true), when true pixels with higher luma than prot_val are protected, false - pixels with lower luma than prot_val are protected; now prot_val (float) = luma threshold; prot_val is in range [0,255] for all bit depth
+### A script to change the brightness of row/column.
 
 
-## Usage of FixRBr/FixCBr(0,100,20,true, prot_val2): 
-# - the first number is the row/column
-# - the second number is "adj_val" in the range [-100,100], positive values make the line brighter, negative values make the line darker, 0 does nothing
-# - the third number is "prot_val" and it's optional, it determines which pixels wouldn't be affected by the filter, it has range [0,255] for all bit depths
-# - the fourth option is "upper" and it's optional, when true pixels with higher luma than prot_val are protected, when false - pixels with lower luma than prot_val are protected. If it's not specified, when prot_val is used, default is true.
-# - the last parameter is "prot_val2" and it's optional (default doesn't have effect), it determines which pixels below threshold wouldn't be affected by the filter
-##
+### Requirements - AviSynth+ 3.6+.
+
+
+### Usage ###
+###
+# FixRBr(clip c, val row, val adj_val, val "prot_val", val "upper", val "prot_val2")
+# FixCBr(clip c, val column, val adj_val, val "prot_val", val "upper", val "prot_val2")
+###
+## Parameters ##
+#---------------
+# c: Input clip.
+# Must be in Y/YUV planar format.
+#---------------
+# row/column: Processed row/column.
+# Can be single value or array.
+#---------------
+# adj_val: Whether to make the row/column brighter or darker.
+# Must be between -100..100.
+# Positive values make the row/column brighter.
+# Negative values make the row/column darker.
+#---------------
+# prot_val: Determines which pixels wouldn't be affected by the filter.
+# Must be between 0..255.
+#---------------
+# upper (default: true)
+# True: Pixels with higher luma than prot_val are protected (not processed).
+# False: Pixels with lower luma than prot_val are protected (not processed).
+#---------------
+# prot_val2: Determines which pixels below threshold wouldn't be affected by the filter.
 # By default prot_val2 doesn't have effect and there is only one threshold ("upper"->above/below) determinating if the pixel will be filtered. If prot_val2 is specified, "upper" doesn't have effect and prot_val + prot_val2 behaves as limits of bandpass filter - prot_val determines the top threshold and prot_val2 determines the bottom threshold. Any pixel value between thresholds is filtered.
+
+
+### Changelog ###
+#---------------
+# Fixed nuked _ChromaLocation frame property if available in the source.
+#---------------
+# Allowed adj_val, prot_val, upper, prot_val2 to be non-array when row/column is array (FixCBr([1,2], 8)).
+#---------------
+# Cosmetic changes.
+#---------------
+# Added array support for parameters.
+#---------------
+# Removed full_range parameter.
+# Added float prot_val2 parameter for protecting pixels above and below threshold simultaneously.
+#---------------
+# Processing also Y clips.
+#---------------
+# Added alias FixRowBrightnessProtect2 / FixColumnBrightnessProtect2 for backward compatibility.
+#---------------
+# Added an optional parameter bool "full_range" - it works only for high bit depth; it determines how the scaling to the input bit depth->8-bit->input bit depth is done ( http://avisynth.nl/index.php/MaskTools2#Expression_syntax_supporting_bit_depth_independent_expressions ).
+#---------------
+# Added "upper" option (default true), when true pixels with higher luma than prot_val are protected, false - pixels with lower luma than prot_val are protected now prot_val (float) = luma threshold.
+# prot_val is in range [0,255] for all bit depth.
 
 
 ## Example how prot_val is working (only one threshold).
@@ -50,11 +87,16 @@
 
 Function FixRBr(clip c, val row, val adj_val, val "prot_val", val "upper", val "prot_val2")
 {
+    if (propGetType(c, "_ChromaLocation") > 0)
+    {
+        cl = propGetInt(c, "_ChromaLocation")
+    }
+
     if (IsArray(row))
     {
         n = row.ArraySize() - 1
-        c        
-        
+        c
+
         for (i = 0, n)
         {
             adj_val_ = IsArray(adj_val) ? adj_val[i] : adj_val
@@ -69,15 +111,25 @@ Function FixRBr(clip c, val row, val adj_val, val "prot_val", val "upper", val "
     {
         FixRBr_(c, row, adj_val, prot_val, upper, prot_val2)
     }
+
+    if (propGetType(c, "_ChromaLocation") > 0)
+    {
+        propSet("_ChromaLocation", cl)
+    }
 }
 
 Function FixCBr(clip c, val column, val adj_val, val "prot_val", val "upper", val "prot_val2")
 {
+    if (propGetType(c, "_ChromaLocation") > 0)
+    {
+        cl = propGetInt(c, "_ChromaLocation")
+    }
+
     if (IsArray(column))
     {
         n = column.ArraySize() - 1
-        c        
-        
+        c
+
         for (i = 0, n)
         {
             adj_val_ = IsArray(adj_val) ? adj_val[i] : adj_val
@@ -92,6 +144,11 @@ Function FixCBr(clip c, val column, val adj_val, val "prot_val", val "upper", va
     {
         FixCBr_(c, column, adj_val, prot_val, upper, prot_val2)
     }
+
+    if (propGetType(c, "_ChromaLocation") > 0)
+    {
+        propSet("_ChromaLocation", cl)
+    }
 }
 
 Function FixRBr_(clip c, int row, float adj_val, float "prot_val", bool "upper", float "prot_val2")
@@ -99,35 +156,35 @@ Function FixRBr_(clip c, int row, float adj_val, float "prot_val", bool "upper",
     Assert(IsYUV(c), "FixRBr: Only YUV/Y clips allowed.")
     Assert(adj_val <= 100, "FixRBr: adj_val max value 100.")
     Assert(adj_val >= -100, "FixRBr: adj_val min value -100.")
-    
+
     if (adj_val == 0)
     {
         return c
     }
-    
+
     if (Defined(prot_val))
     {
         Assert(prot_val <= 255, "FixRBr: prot_val max value 255.")
         Assert(prot_val >= 0, "FixRBr: prot_val min value 0.")
-    }    
+    }
     if (Defined(prot_val2))
     {
         Assert(prot_val2 <= 255, "FixRBr: prot_val2 max value 255.")
-        Assert(prot_val2 >= 0, "FixRBr: prot_val2 min value 0.")      
-    }    
+        Assert(prot_val2 >= 0, "FixRBr: prot_val2 min value 0.")
+    }
     if (Defined(prot_val) && Defined(prot_val2))
     {
         Assert((prot_val - prot_val2) >= 19, "FixRBr: The difference between prot_val and prot_val2 must be >= 19.")
     }
-        
+
     if (Defined(prot_val) && !Defined(upper))
     {
         upper = true
     }
-    
+
     num_comp = NumComponents(c) == 3
     Crop(num_comp ? ExtractY(c) : c, 0, row, 0, 1)
-    
+
     if (!Defined(prot_val) && adj_val > 0)
     {
         Expr("x 16 scaleb - 0 <= 16 scaleb 235 scaleb "+ string(adj_val * 2.19) +" scaleb - 16 scaleb - 0 <= 0.01 235 scaleb "+ string(adj_val * 2.19) +" scaleb - 16 scaleb - ? / 219 scaleb * x 16 scaleb - 235 scaleb "+ string(adj_val * 2.19) +" scaleb - 16 scaleb - 0 <= 0.01 235 scaleb "+ string(adj_val * 2.19) +" scaleb - 16 scaleb - ? / 219 scaleb * 16 scaleb + ? 16 scaleb 235 scaleb clip")
@@ -160,7 +217,7 @@ Function FixRBr_(clip c, int row, float adj_val, float "prot_val", bool "upper",
     {
         Expr("x 16 scaleb - 0 <= 16 scaleb 219 scaleb / 235 scaleb "+ string(adj_val * 2.19) +" scaleb + 16 scaleb - * x 16 scaleb - 219 scaleb / 235 scaleb "+ string(adj_val * 2.19) +" scaleb + 16 scaleb - * 16 scaleb + ? x "+ string(prot_val) +" scaleb - -10 scaleb / 0 max 1 min * x x "+ string(prot_val) +" scaleb 10 scaleb - - 10 scaleb / 0 max 1 min * + "+ string(prot_val2) +" scaleb x - -10 scaleb / 0 max 1 min * x "+ string(prot_val2) +" scaleb 10 scaleb + x - 10 scaleb / 0 max 1 min * + 16 scaleb 235 scaleb clip")
     }
-    
+
     if (num_comp)
     {
         Overlay(ExtractY(c), last, 0, row, mode="luma")
@@ -171,41 +228,41 @@ Function FixRBr_(clip c, int row, float adj_val, float "prot_val", bool "upper",
         Overlay(c, last, 0, row, mode="luma")
     }
 }
- 
+
 Function FixCBr_(clip c, int column, float adj_val, float "prot_val", bool "upper", float "prot_val2")
 {
     Assert(IsYUV(c), "FixCBr: Only YUV/Y clips allowed.")
     Assert(adj_val <= 100, "FixCBr: adj_val max value 100.")
     Assert(adj_val >= -100, "FixCBr: adj_val min value -100.")
-    
+
     if (adj_val == 0)
     {
         return c
     }
-    
+
     if (Defined(prot_val))
     {
         Assert(prot_val <= 255, "FixCBr: prot_val max value 255.")
         Assert(prot_val >= 0, "FixCBr: prot_val min value 0.")
-    }    
+    }
     if (Defined(prot_val2))
     {
         Assert(prot_val2 <= 255, "FixCBr: prot_val2 max value 255.")
-        Assert(prot_val2 >= 0, "FixCBr: prot_val2 min value 0.")      
-    }    
+        Assert(prot_val2 >= 0, "FixCBr: prot_val2 min value 0.")
+    }
     if (Defined(prot_val) && Defined(prot_val2))
     {
         Assert((prot_val - prot_val2) >= 19, "FixCBr: The difference between prot_val and prot_val2 must be >= 19.")
     }
-        
+
     if (Defined(prot_val) && !Defined(upper))
     {
         upper = true
     }
-    
+
     num_comp = NumComponents(c) == 3
     Crop(num_comp ? ExtractY(c) : c, column, 0, 1, 0)
-        
+
     if (!Defined(prot_val) && adj_val > 0)
     {
         Expr("x 16 scaleb - 0 <= 16 scaleb 235 scaleb "+ string(adj_val * 2.19) +" scaleb - 16 scaleb - 0 <= 0.01 235 scaleb "+ string(adj_val * 2.19) +" scaleb - 16 scaleb - ? / 219 scaleb * x 16 scaleb - 235 scaleb "+ string(adj_val * 2.19) +" scaleb - 16 scaleb - 0 <= 0.01 235 scaleb "+ string(adj_val * 2.19) +" scaleb - 16 scaleb - ? / 219 scaleb * 16 scaleb + ? 16 scaleb 235 scaleb clip")
@@ -238,7 +295,7 @@ Function FixCBr_(clip c, int column, float adj_val, float "prot_val", bool "uppe
     {
         Expr("x 16 scaleb - 0 <= 16 scaleb 219 scaleb / 235 scaleb "+ string(adj_val * 2.19) +" scaleb + 16 scaleb - * x 16 scaleb - 219 scaleb / 235 scaleb "+ string(adj_val * 2.19) +" scaleb + 16 scaleb - * 16 scaleb + ? x "+ string(prot_val) +" scaleb - -10 scaleb / 0 max 1 min * x x "+ string(prot_val) +" scaleb 10 scaleb - - 10 scaleb / 0 max 1 min * + "+ string(prot_val2) +" scaleb x - -10 scaleb / 0 max 1 min * x "+ string(prot_val2) +" scaleb 10 scaleb + x - 10 scaleb / 0 max 1 min * + 16 scaleb 235 scaleb clip")
     }
-    
+
     if (num_comp)
     {
         Overlay(ExtractY(c), last, column, 0, mode="luma")
