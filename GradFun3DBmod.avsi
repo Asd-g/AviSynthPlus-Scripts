@@ -114,6 +114,8 @@
 ### | CHANGELOG |
 ### +-----------+
 ###
+### v2.1 : Changed the names of the internal functions
+###
 ### v2.0 : initial version
 ###        added support for 10..16-bit clips
 ###        speed improved (> 100%) by replacing mt_luts with ex_luts
@@ -191,7 +193,7 @@ chroma = (thrC > 1.0 || strC > 0.0) ? true : false
 
 
 ### DITHER
-   Function GF_ModeOff(clip clp, float thr, float thrC)
+   Function GF_ModeOff3(clip clp, float thr, float thrC)
    {
    w = CLP.width()
    p = (ceil(w/8.0)*8-w)/2
@@ -210,7 +212,7 @@ chroma = (thrC > 1.0 || strC > 0.0) ? true : false
    Return GFO
    }
 
-   Function GF_Borders(clip clp, float thr, float thrC)
+   Function GF_Borders3(clip clp, float thr, float thrC)
    {
    w = CLP.width()
    p = 16 + (ceil(w/8.0)*8-w)/2
@@ -229,7 +231,7 @@ chroma = (thrC > 1.0 || strC > 0.0) ? true : false
    Return GFK
    }
 
-   Function GF_Padding(clip clp, float thr, float thrC)
+   Function GF_Padding3(clip clp, float thr, float thrC)
    {
    w = CLP.width()
    h = CLP.height()
@@ -249,7 +251,7 @@ chroma = (thrC > 1.0 || strC > 0.0) ? true : false
    Return GFP
    }
 
-   Function GF_Mirrors(clip clp, float thr, float thrC)
+   Function GF_Mirrors3(clip clp, float thr, float thrC)
    {
    w = CLP.width()
    h = CLP.height()
@@ -285,10 +287,10 @@ chroma = (thrC > 1.0 || strC > 0.0) ? true : false
    Return GFM
    }
 
-dither  = mode==1  ? input.GF_Borders(thr,thrC)
-\       : mode==2  ? input.GF_Padding(thr,thrC)
-\       : mode==3  ? input.GF_Mirrors(thr,thrC)
-\       :            input.GF_ModeOff(thr,thrC)
+dither  = mode==1  ? input.GF_Borders3(thr,thrC)
+\       : mode==2  ? input.GF_Padding3(thr,thrC)
+\       : mode==3  ? input.GF_Mirrors3(thr,thrC)
+\       :            input.GF_ModeOff3(thr,thrC)
 
 
 ### GRAIN
@@ -320,7 +322,7 @@ output = mask==true   ? mt_merge(input,deband,GFmask,luma=chroma?true:false,u=ch
 
 
 ### SHOW
-   function GFMOD_Show(clip input, clip output, string "version",
+   function GFMOD_Show3(clip input, clip output, string "version",
    \                   float "thr", float "thrC", int "mode",
    \                   float "str", float "strC", int "temp", int "adapt", string "custom",
    \                   bool "mask", int "radius", int "range",
@@ -416,7 +418,7 @@ output = mask==true   ? mt_merge(input,deband,GFmask,luma=chroma?true:false,u=ch
    }
 
 output = show==false ? output
-   \                 : GFMOD_Show(input, output, version=version,
+   \                 : GFMOD_Show3(input, output, version=version,
    \                              thr=thr, thrC=thrC, mode=mode,
    \                              str=str, strC=strC, temp=temp, adapt=adapt, custom=custom,
    \                              mask=mask, radius=radius, range=range,
