@@ -5,7 +5,6 @@ It works only on the luma plane.
 */
 
 
-
 ### Requirements - AviSynth+ 3.6+, bbmod.
 
 
@@ -36,24 +35,31 @@ It works only on the luma plane.
 
 ### Changelog ###
 #---------------
+# Fixed nuked _ChromaLocation frame property if available in the source.
+#---------------
 # Initial version.
 
 
 Function bbmodY(clip c, val "column", val "w", val "row", val "h", val "cTop", val "cBottom", val "cLeft", val "cRight", val "thresh", val "blur")
 {
+    if (propGetType(c, "_ChromaLocation") > 0)
+    {
+        cl = propGetInt(c, "_ChromaLocation")
+    }
+
     ExtractY(c)
-    
+
     if (Defined(column))
     {
         r = Width(c) - 1
-        
+
         if (IsArray(column))
         {
             for (i = 0, ArraySize(column) - 1)
             {
                 _w = Defined(w) ? IsArray(w) ? w[i] : w : 0
                 _col = column[i] + 1
-                
+
                 if (column[i] < Width(c) / 2)
                 {
                     if (column[i] == 0)
@@ -70,7 +76,7 @@ Function bbmodY(clip c, val "column", val "w", val "row", val "h", val "cTop", v
                 else
                 {
                     if (column[i] == r)
-                    { 
+                    {
                         if (_w == 0) { bbmod(cTop, cBottom, cLeft, cRight, thresh, blur) }
                         else
                         {
@@ -94,10 +100,10 @@ Function bbmodY(clip c, val "column", val "w", val "row", val "h", val "cTop", v
         {
             _w = Default(w, 0)
             _col = column + 1
-            
+
             Assert(column > 0 || (column == 0 && _w != 0), "bbmodY: Use bbmod for column=0 and w=0.")
             Assert(column < r || (column == r && _w != 0), "bbmodY: Use bbmod for column=" + String(r) + " and w=0.")
-            
+
             if (column < Width(c) / 2)
             {
                 if (column == 0) { StackHorizontal(Crop(bbmod(cTop, cBottom, cLeft, cRight, thresh, blur), 0, 0, _w, 0), Crop(_w, 0, 0, 0)) }
@@ -126,18 +132,18 @@ Function bbmodY(clip c, val "column", val "w", val "row", val "h", val "cTop", v
             }
         }
     }
-    
+
     if (Defined(row))
     {
         b = Height(c) - 1
-        
+
         if (IsArray(row))
         {
             for (i = 0, ArraySize(row) - 1)
             {
                 _h = Defined(h) ? IsArray(h) ? h[i] : h : 0
                 _row = row[i] + 1
-                
+
                 if (row[i] < Height(c) / 2)
                 {
                     if (row[i] == 0)
@@ -154,7 +160,7 @@ Function bbmodY(clip c, val "column", val "w", val "row", val "h", val "cTop", v
                 else
                 {
                     if (row[i] == b)
-                    { 
+                    {
                         if (_h == 0) { bbmod(cTop, cBottom, cLeft, cRight, thresh, blur) }
                         else
                         {
@@ -178,7 +184,7 @@ Function bbmodY(clip c, val "column", val "w", val "row", val "h", val "cTop", v
         {
             _h = Default(h, 0)
             _row = row + 1
-            
+
             Assert(row > 0 || (row == 0 && _h != 0), "bbmodY: Use bbmod for row=0 and h=0.")
             Assert(row < b || (row == b && _h != 0), "bbmodY: Use bbmod for row=" + String(b) + " and h=0.")
 
@@ -210,6 +216,14 @@ Function bbmodY(clip c, val "column", val "w", val "row", val "h", val "cTop", v
             }
         }
     }
-    
-    if (NumComponents(c) > 1) { return CombinePlanes(last, c, "yuv", sample_clip=c) }
+
+    if (NumComponents(c) > 1)
+    {
+        CombinePlanes(last, c, "yuv", sample_clip=c)
+
+        if (propGetType(c, "_ChromaLocation") > 0)
+        {
+            propSet("_ChromaLocation", cl)
+        }
+    }
 }
