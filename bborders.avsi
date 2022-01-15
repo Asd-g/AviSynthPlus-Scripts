@@ -103,6 +103,8 @@ BalanceBorders/bbmod([60,20,40], cleft=[40,20,10], thresh=[12,4,5], blur=[100,99
 
 ### Changelog ###
 #---------------
+# Fixed nuked _ChromaLocation frame property if available in the source.
+#---------------
 # Fixed processing when the clip has only one plane.
 #---------------
 # Added parameter "cloc".
@@ -138,12 +140,32 @@ BalanceBorders/bbmod([60,20,40], cleft=[40,20,10], thresh=[12,4,5], blur=[100,99
 
 Function BalanceBorders(clip c, val "cTop", val "cBottom", val "cLeft", val "cRight", val "thresh", val "blur", bool "y", bool "u", bool "v", string "cloc")
 {
+    if (propGetType(c, "_ChromaLocation") > 0)
+    {
+        cl = propGetInt(c, "_ChromaLocation")
+    }
+
     bb_process(c, 0, cTop, cBottom, cLeft, cRight, thresh, blur, y, u, v, cloc)
+
+    if (propGetType(c, "_ChromaLocation") > 0)
+    {
+        propSet("_ChromaLocation", cl)
+    }
 }
 
 Function bbmod(clip c, val "cTop", val "cBottom", val "cLeft", val "cRight", val "thresh", val "blur", bool "y", bool "u", bool "v", string "cloc")
 {
+    if (propGetType(c, "_ChromaLocation") > 0)
+    {
+        cl = propGetInt(c, "_ChromaLocation")
+    }
+
     bb_process(c, 1, cTop, cBottom, cLeft, cRight, thresh, blur, y, u, v, cloc)
+
+    if (propGetType(c, "_ChromaLocation") > 0)
+    {
+        propSet("_ChromaLocation", cl)
+    }
 }
 
 Function bb_process(clip c, int func_name, val "cTop", val "cBottom", val "cLeft", val "cRight", val "thresh", val "blur", bool "y", bool "u", bool "v", string "cloc")
