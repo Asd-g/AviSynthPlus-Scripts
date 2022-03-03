@@ -59,6 +59,8 @@ It works only on the luma plane.
 
 ### Changelog ###
 #---------------
+# Fixed column/row = 0.
+#---------------
 # Allowed column, row, cTop, cBottom, cLeft, cRight to be specified 0 (for example bbmodY(10, 0, 0, 0, 0, 0, 3, 0, 100, 300)).
 # Restrictred the usage of cTop, cBottom, cLeft, cRight - only one of them can be greater than 0 or array.
 #---------------
@@ -72,10 +74,26 @@ It works only on the luma plane.
 
 Function bbmodY(clip c, val "column", val "w", val "row", val "h", val "cTop", val "cBottom", val "cLeft", val "cRight", val "thresh", val "blur")
 {
-    cl = (Defined(column)) ? (IsArray(column)) ? 1 : Default(column, 0) : -1
-    rw = (Defined(row)) ? (IsArray(row)) ? 1 : Default(row, 0) : -1
+    if (Defined(column))
+    {
+        Assert(column >= 0, "bbmodY: column must be either greater than or equal to 0.")
+        cl = (IsArray(column)) ? 1 : Default(column, 0)
+    }
+    else
+    {
+        cl = -1
+    }
+    if (Defined(row))
+    {
+        Assert(row >= 0, "bbmodY: row must be either greater than or equal to 0.")
+        rw = (IsArray(row)) ? 1 : Default(row, 0)
+    }
+    else
+    {
+        rw = -1
+    }
 
-    Assert(!(cl > 0 && rw > 0), "bbmodY: column and row cannot be specified at the same time.")
+    Assert(!(cl >= 0 && rw >= 0), "bbmodY: column and row cannot be specified at the same time.")
 
     c
 
@@ -86,153 +104,140 @@ Function bbmodY(clip c, val "column", val "w", val "row", val "h", val "cTop", v
 
     ExtractY()
 
-    if (Defined(column))
+    if (cl >= 0)
     {
+        r = Width() - 1
+        column = (IsArray(column)) ? column : [column]
+        size = ArraySize(column) - 1
 
-        if (cl > 0)
+        for (i = 0, size)
         {
-            r = Width() - 1
-            column = (IsArray(column)) ? column : [column]
-            size = ArraySize(column) - 1
+            w_ = (Defined(w)) ? (IsArray(w)) ? w[i] : w : 0
+            thresh_ = (Defined(thresh)) ? (IsArray(thresh)) ? thresh[i] : thresh : 128.0
+            blur_ = (Defined(blur)) ? (IsArray(blur)) ? blur[i] : blur : 999
+            col_ = column[i] + 1
 
-            for (i = 0, size)
+            if (column[i] < Width() / 2)
             {
-                w_ = (Defined(w)) ? (IsArray(w)) ? w[i] : w : 0
-                thresh_ = (Defined(thresh)) ? (IsArray(thresh)) ? thresh[i] : thresh : 128.0
-                blur_ = (Defined(blur)) ? (IsArray(blur)) ? blur[i] : blur : 999
-                col_ = column[i] + 1
+                r_ = (Defined(cRight)) ? (IsArray(cRight)) ? 1 : Default(cRight, 0) : -1
+                t_ = (Defined(cTop)) ? (IsArray(cTop)) ? 1 : Default(cTop, 0) : -1
+                b_ = (Defined(cBottom)) ? (IsArray(cBottom)) ? 1 : Default(cBottom, 0) : -1
 
-                Assert(!(size == 0 && column[i] == 0 && w_ == 0), "bbmodY: Use bbmod for column=0 and w=0.")
-                Assert(!(size == 0 && column[i] == r && w_ == 0), "bbmodY: Use bbmod for column=" + String(r) + " and w=0.")
+                Assert(!(r_ > 0), "bbmodY: cRight cannot be greater than 0 when column is smaller than half of the clip width.")
+                Assert(!(t_ > 0), "bbmodY: cTop cannot be greater than 0 when column is specified.")
+                Assert(!(b_ > 0), "bbmodY: cBottom cannot be greater than 0 when column is specified.")
 
-                if (column[i] < Width() / 2)
+                cLeft_ = (Defined(cLeft)) ? (IsArray(cLeft)) ? cLeft[i] : cLeft : 0
+
+                if (column[i] == 0)
                 {
-                    r_ = (Defined(cRight)) ? (IsArray(cRight)) ? 1 : Default(cRight, 0) : -1
-                    t_ = (Defined(cTop)) ? (IsArray(cTop)) ? 1 : Default(cTop, 0) : -1
-                    b_ = (Defined(cBottom)) ? (IsArray(cBottom)) ? 1 : Default(cBottom, 0) : -1
+                    if (w_ == 0) { bbmod(cTop, cBottom, cLeft_, 0, thresh_, blur_) }
+                    else { StackHorizontal(Crop(bbmod(cTop, cBottom, cLeft_, 0, thresh_, blur_), 0, 0, w_, 0), Crop(w_, 0, 0, 0)) }
+                }
+                else
+                {
+                    if (w_ == 0) { StackHorizontal(Crop(0, 0, col_, 0), bbmod(Crop(col_, 0, 0, 0), cTop, cBottom, cLeft_, 0, thresh_, blur_)) }
+                    else { StackHorizontal(Crop(0, 0, col_, 0), Crop(bbmod(Crop(col_, 0, 0, 0), cTop, cBottom, cLeft_, 0, thresh_, blur_), 0, 0, w_, 0), Crop(col_ + w_, 0, 0, 0)) }
+                }
+            }
+            else
+            {
+                l_ = (Defined(cLeft)) ? (IsArray(cLeft)) ? 1 : Default(cLeft, 0) : -1
+                t_ = (Defined(cTop)) ? (IsArray(cTop)) ? 1 : Default(cTop, 0) : -1
+                b_ = (Defined(cBottom)) ? (IsArray(cBottom)) ? 1 : Default(cBottom, 0) : -1
 
-                    Assert(!(r_ > 0), "bbmodY: cRight cannot be greater than 0 when column is smaller than half of the clip width.")
-                    Assert(!(t_ > 0), "bbmodY: cTop cannot be greater than 0 when column is specified.")
-                    Assert(!(b_ > 0), "bbmodY: cBottom cannot be greater than 0 when column is specified.")
+                Assert(!(l_ > 0), "bbmodY: cLeft cannot be greater than 0 when column is bigger than half of the clip width.")
+                Assert(!(t_ > 0), "bbmodY: cTop cannot be greater than 0 when column is specified.")
+                Assert(!(b_ > 0), "bbmodY: cBottom cannot be greater than 0 when column is specified.")
 
-                    cLeft_ = (Defined(cLeft)) ? (IsArray(cLeft)) ? cLeft[i] : cLeft : 0
+                cRight_ = (Defined(cRight)) ? (IsArray(cRight)) ? cRight[i] : cRight : 0
 
-                    if (column[i] == 0)
-                    {
-                        if (w_ == 0) { bbmod(cTop, cBottom, cLeft_, 0, thresh_, blur_) }
-                        else { StackHorizontal(Crop(bbmod(cTop, cBottom, cLeft_, 0, thresh_, blur_), 0, 0, w_, 0), Crop(w_, 0, 0, 0)) }
-                    }
+                if (column[i] == r)
+                {
+                    if (w_ == 0) { bbmod(cTop, cBottom, 0, cRight_, thresh_, blur_) }
                     else
                     {
-                        if (w_ == 0) { StackHorizontal(Crop(0, 0, col_, 0), bbmod(Crop(col_, 0, 0, 0), cTop, cBottom, cLeft_, 0, thresh_, blur_)) }
-                        else { StackHorizontal(Crop(0, 0, col_, 0), Crop(bbmod(Crop(col_, 0, 0, 0), cTop, cBottom, cLeft_, 0, thresh_, blur_), 0, 0, w_, 0), Crop(col_ + w_, 0, 0, 0)) }
+                        w_1 = col_ - w_
+                        StackHorizontal(Crop(0, 0, w_1, 0), Crop(bbmod(Crop(0, 0, col_, 0), cTop, cBottom, 0, cRight_, thresh_, blur_), w_1, 0, 0, 0))
                     }
                 }
                 else
                 {
-                    l_ = (Defined(cLeft)) ? (IsArray(cLeft)) ? 1 : Default(cLeft, 0) : -1
-                    t_ = (Defined(cTop)) ? (IsArray(cTop)) ? 1 : Default(cTop, 0) : -1
-                    b_ = (Defined(cBottom)) ? (IsArray(cBottom)) ? 1 : Default(cBottom, 0) : -1
-
-                    Assert(!(l_ > 0), "bbmodY: cLeft cannot be greater than 0 when column is bigger than half of the clip width.")
-                    Assert(!(t_ > 0), "bbmodY: cTop cannot be greater than 0 when column is specified.")
-                    Assert(!(b_ > 0), "bbmodY: cBottom cannot be greater than 0 when column is specified.")
-
-                    cRight_ = (Defined(cRight)) ? (IsArray(cRight)) ? cRight[i] : cRight : 0
-
-                    if (column[i] == r)
-                    {
-                        if (w_ == 0) { bbmod(cTop, cBottom, 0, cRight_, thresh_, blur_) }
-                        else
-                        {
-                            w_1 = col_ - w_
-                            StackHorizontal(Crop(0, 0, w_1, 0), Crop(bbmod(Crop(0, 0, col_, 0), cTop, cBottom, 0, cRight_, thresh_, blur_), w_1, 0, 0, 0))
-                        }
-                    }
+                    if (w_ == 0) { StackHorizontal(bbmod(Crop(0, 0, col_, 0), cTop, cBottom, 0, cRight_, thresh_, blur_), Crop(col_, 0, 0, 0)) }
                     else
                     {
-                        if (w_ == 0) { StackHorizontal(bbmod(Crop(0, 0, col_, 0), cTop, cBottom, 0, cRight_, thresh_, blur_), Crop(col_, 0, 0, 0)) }
-                        else
-                        {
-                            w_1 = col_ - w_
-                            StackHorizontal(Crop(0, 0, w_1, 0), Crop(bbmod(Crop(0, 0, col_, 0), cTop, cBottom, 0, cRight_, thresh_, blur_), w_1, 0, 0, 0), Crop(col_, 0, 0, 0))
-                        }
+                        w_1 = col_ - w_
+                        StackHorizontal(Crop(0, 0, w_1, 0), Crop(bbmod(Crop(0, 0, col_, 0), cTop, cBottom, 0, cRight_, thresh_, blur_), w_1, 0, 0, 0), Crop(col_, 0, 0, 0))
                     }
                 }
             }
         }
     }
 
-    if (Defined(row))
+    if (rw >= 0)
     {
-        if (rw > 0)
+        b = Height() - 1
+        row = (IsArray(row)) ? row : [row]
+        size = ArraySize(row) - 1
+
+        for (i = 0, size)
         {
-            b = Height() - 1
-            row = (IsArray(row)) ? row : [row]
-            size = ArraySize(row) - 1
+            h_ = (Defined(h)) ? (IsArray(h)) ? h[i] : h : 0
+            thresh_ = (Defined(thresh)) ? (IsArray(thresh)) ? thresh[i] : thresh : 128.0
+            blur_ = (Defined(blur)) ? (IsArray(blur)) ? blur[i] : blur : 999
+            row_ = row[i] + 1
 
-            for (i = 0, size)
+            if (row[i] < Height() / 2)
             {
-                h_ = (Defined(h)) ? (IsArray(h)) ? h[i] : h : 0
-                thresh_ = (Defined(thresh)) ? (IsArray(thresh)) ? thresh[i] : thresh : 128.0
-                blur_ = (Defined(blur)) ? (IsArray(blur)) ? blur[i] : blur : 999
-                row_ = row[i] + 1
+                b_ = (Defined(cBottom)) ? (IsArray(cBottom)) ? 1 : Default(cBottom, 0) : -1
+                l_ = (Defined(cLeft)) ? (IsArray(cLeft)) ? 1 : Default(cLeft, 0) : -1
+                r_ = (Defined(cRight)) ? (IsArray(cRight)) ? 1 : Default(cRight, 0) : -1
 
-                Assert(!(size == 0 && row[i] == 0 && h_ == 0), "bbmodY: Use bbmod for row=0 and h=0.")
-                Assert(!(size == 0 && row[i] == b && h_ == 0), "bbmodY: Use bbmod for row=" + String(b) + " and h=0.")
+                Assert(!(b_ > 0), "bbmodY: cBottom cannot be greater than 0 when row is smaller than half of the clip height.")
+                Assert(!(l_ > 0), "bbmodY: cLeft cannot be greater than 0 when row is specified.")
+                Assert(!(r_ > 0), "bbmodY: cRight cannot be greater than 0 when row is specified.")
 
-                if (row[i] < Height() / 2)
+                cTop_ = (Defined(cTop)) ? (IsArray(cTop)) ? cTop[i] : cTop : 0
+
+                if (row[i] == 0)
                 {
-                    b_ = (Defined(cBottom)) ? (IsArray(cBottom)) ? 1 : Default(cBottom, 0) : -1
-                    l_ = (Defined(cLeft)) ? (IsArray(cLeft)) ? 1 : Default(cLeft, 0) : -1
-                    r_ = (Defined(cRight)) ? (IsArray(cRight)) ? 1 : Default(cRight, 0) : -1
+                    if (h_ == 0) { bbmod(cTop_, 0, cLeft, cRight, thresh_, blur_) }
+                    else { StackVertical(Crop(bbmod(cTop_, 0, cLeft, cRight, thresh_, blur_), 0, 0, 0, h_), Crop(0, h_, 0, 0)) }
+                }
+                else
+                {
+                    if (h_ == 0) { StackVertical(Crop(0, 0, 0, row_), bbmod(Crop(0, row_, 0, 0), cTop_, 0, cLeft, cRight, thresh_, blur_)) }
+                    else { StackVertical(Crop(0, 0, 0, row_), Crop(bbmod(Crop(0, row_, 0, 0), cTop_, 0, cLeft, cRight, thresh_, blur_), 0, 0, 0, h_), Crop(0, row_ + h_, 0, 0)) }
+                }
+            }
+            else
+            {
+                t_ = (Defined(cTop)) ? (IsArray(cTop)) ? 1 : Default(cTop, 0) : -1
+                l_ = (Defined(cLeft)) ? (IsArray(cLeft)) ? 1 : Default(cLeft, 0) : -1
+                r_ = (Defined(cRight)) ? (IsArray(cRight)) ? 1 : Default(cRight, 0) : -1
 
-                    Assert(!(b_ > 0), "bbmodY: cBottom cannot be greater than 0 when row is smaller than half of the clip height.")
-                    Assert(!(l_ > 0), "bbmodY: cLeft cannot be greater than 0 when row is specified.")
-                    Assert(!(r_ > 0), "bbmodY: cRight cannot be greater than 0 when row is specified.")
+                Assert(!(t_ > 0), "bbmodY: cTop cannot be greater than 0 when row is bigger than half of the clip height.")
+                Assert(!(l_ > 0), "bbmodY: cLeft cannot be greater than 0 when row is specified.")
+                Assert(!(r_ > 0), "bbmodY: cRight cannot be greater than 0 when row is specified.")
 
-                    cTop_ = (Defined(cTop)) ? (IsArray(cTop)) ? cTop[i] : cTop : 0
+                cBottom_ = (Defined(cBottom)) ? (IsArray(cBottom)) ? cBottom[i] : cBottom : 0
 
-                    if (row[i] == 0)
-                    {
-                        if (h_ == 0) { bbmod(cTop_, 0, cLeft, cRight, thresh_, blur_) }
-                        else { StackVertical(Crop(bbmod(cTop_, 0, cLeft, cRight, thresh_, blur_), 0, 0, 0, h_), Crop(0, h_, 0, 0)) }
-                    }
+                if (row[i] == b)
+                {
+                    if (h_ == 0) { bbmod(0, cBottom_, cLeft, cRight, thresh_, blur_) }
                     else
                     {
-                        if (h_ == 0) { StackVertical(Crop(0, 0, 0, row_), bbmod(Crop(0, row_, 0, 0), cTop_, 0, cLeft, cRight, thresh_, blur_)) }
-                        else { StackVertical(Crop(0, 0, 0, row_), Crop(bbmod(Crop(0, row_, 0, 0), cTop_, 0, cLeft, cRight, thresh_, blur_), 0, 0, 0, h_), Crop(0, row_ + h_, 0, 0)) }
+                        h_1 = row_ - h_
+                        StackVertical(Crop(0, 0, 0, h_1), Crop(bbmod(Crop(0, 0, 0, row_), 0, cBottom_, cLeft, cRight, thresh_, blur_), 0, h_1, 0, 0))
                     }
                 }
                 else
                 {
-                    t_ = (Defined(cTop)) ? (IsArray(cTop)) ? 1 : Default(cTop, 0) : -1
-                    l_ = (Defined(cLeft)) ? (IsArray(cLeft)) ? 1 : Default(cLeft, 0) : -1
-                    r_ = (Defined(cRight)) ? (IsArray(cRight)) ? 1 : Default(cRight, 0) : -1
-
-                    Assert(!(t_ > 0), "bbmodY: cTop cannot be greater than 0 when row is bigger than half of the clip height.")
-                    Assert(!(l_ > 0), "bbmodY: cLeft cannot be greater than 0 when row is specified.")
-                    Assert(!(r_ > 0), "bbmodY: cRight cannot be greater than 0 when row is specified.")
-
-                    cBottom_ = (Defined(cBottom)) ? (IsArray(cBottom)) ? cBottom[i] : cBottom : 0
-
-                    if (row[i] == b)
-                    {
-                        if (h_ == 0) { bbmod(0, cBottom_, cLeft, cRight, thresh_, blur_) }
-                        else
-                        {
-                            h_1 = row_ - h_
-                            StackVertical(Crop(0, 0, 0, h_1), Crop(bbmod(Crop(0, 0, 0, row_), 0, cBottom_, cLeft, cRight, thresh_, blur_), 0, h_1, 0, 0))
-                        }
-                    }
+                    if (h_ == 0) { StackVertical(bbmod(Crop(0, 0, 0, row_), 0, cBottom_, cLeft, cRight, thresh_, blur_), Crop(0, row_, 0, 0)) }
                     else
                     {
-                        if (h_ == 0) { StackVertical(bbmod(Crop(0, 0, 0, row_), 0, cBottom_, cLeft, cRight, thresh_, blur_), Crop(0, row_, 0, 0)) }
-                        else
-                        {
-                            h_1 = row_ - h_
-                            StackVertical(Crop(0, 0, 0, h_1), Crop(bbmod(Crop(0, 0, 0, row_), 0, cBottom_, cLeft, cRight, thresh_, blur_), 0, h_1, 0, 0), Crop(0, row_, 0, 0))
-                        }
+                        h_1 = row_ - h_
+                        StackVertical(Crop(0, 0, 0, h_1), Crop(bbmod(Crop(0, 0, 0, row_), 0, cBottom_, cLeft, cRight, thresh_, blur_), 0, h_1, 0, 0), Crop(0, row_, 0, 0))
                     }
                 }
             }
