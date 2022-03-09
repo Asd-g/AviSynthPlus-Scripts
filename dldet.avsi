@@ -5,7 +5,7 @@ The difference between lines could be displayed or the frames above threshold co
 */
 
 
-### Requirements - AviSynth+ >= 3.6, ContinuityFixer, retinex_edgemask, LinesLumaDiff, RT_Stats, ApplyGradationCurves.
+### Requirements - AviSynth+ >= 3.6, solarCurve, ContinuityFixer, retinex_edgemask, LinesLumaDiff, RT_Stats, ApplyGradationCurves.
 
 
 ### Usage ###
