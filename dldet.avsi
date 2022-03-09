@@ -5,53 +5,63 @@ The difference between lines could be displayed or the frames above threshold co
 */
 
 
-### Requirements - AviSynth+ >= 3.6, bbmod, solarCurve, LinesLumaDiff, RT_Stats.
+### Requirements - AviSynth+ >= 3.6, ContinuityFixer, retinex_edgemask, LinesLumaDiff, RT_Stats, ApplyGradationCurves.
 
 
 ### Usage ###
 ###
-# dldet(clip c, string "output", int "left", int "top", int "right", int "bottom", float "tl", float "tt", float "tr", float "tb", int "width", int "height", bool "debug", bool "show")
+# dldet(clip c, string "output", int "n", float "thr", float "thr1", bool "left", bool "top", bool "right", bool "bottom", bool "debug", bool "show", string "prefilter")
 ###
 ## Parameters ##
 #---------------
 # c: Input clip.
 # Must be in YUV planar format.
 #---------------
-# output (default ""): The path of the txt file with frames.
-# Must be specified for debug=false, show=true.
+# output (default not defined): The path of the txt file with frames.
+# Must be specified for debug=false.
 #---------------
-# left, top, right, bottom: How many lines on each side will be checked.
-# debug=false: Default left = top = right = bottom = 3.
-# debug:true: Not defined. Only one side can be specified.
+# n (default 1): The line that will be checked at both sides, top and bottom.
+# For example, 1 means that the first column (first line from left), the last column (the first column from right), the first row (the first line from top) and the last row (the first line from bottom) will be checked.
 #---------------
-# tl, tt, tr, tb (default tl=0.3, tt=tr=tb=tl): Threshold.
-# debug=false: If the luma difference between the current and the neighbour line is above the threshold, the frame will be saved.
-# Must be between 0.0 and 1.0.
+# thr (default 0.019607): The threshold of the difference between the checked line and the neighbour one.
+# This threshold is applied for the non-filtered video.
 #---------------
-# width (default 220): The width used for difference cheking.
+# thr1 (default 0.352941): The threshold of the difference between the checked line and the neighbour one.
+# This threshold is applied for the prefiltered video.
 #---------------
-# height (default 100): The height used for difference checking.
+# left, top, right, bottom (default true): Whether the line from left, top, right, bottom will be checked.
 #---------------
-# debug (default false): Whether to display the difference between the lines.
+# debug (default false): Whether to display the difference between two lines.
+# The first number is the difference from the non-filtered video.
+# The second number is the difference from the prefiltered video.
 #---------------
-# show (default false): Whether to display only the saved frames.
+# show (default false): Whether to display only the already saved frames.
+# It only has effect when debug=false.
+#---------------
+# prefilter (default """ApplyGradationCurves(lumaPoints="16,16,208,208,235,210").prefetch(2).solarCurve().prefetch(1).retinex_edgemask().prefetch(8)"""): The prefiltered video.
+# If "": the non-filtered video is used.
 
 
 # Info about the usage
 /*
 Usually you can firstly use debug=true: find frames with dirty lines (dark and bright) to see what is difference. The difference can be used as threshold.
 
-After set `output` and debug to false. Run the script in one of the following ways:
+Next step is to set `output` and set debug=false. Run the script in one of the following ways:
 - avsr ( https://forum.doom9.org/showthread.php?t=173259 ): avsr(64) script_name.avs;
 - avsmeter ( https://forum.doom9.org/showthread.php?t=174797 ): avsmeter(64) script_name.avs;
 - ffmpeg: ffmpeg -i script_name.avs -f null - ;
 - AvsPmod: Video->Tools->Run analysis pass.
 
-When you have the saved frames set show to true to see only the saved frames.
+When you have the saved frames set show=true to see only the saved frames.
 */
 
 
 ### Changelog ###
+#---------------
+# Changed the type of left, top, right, bottom.
+# Added parameter n and prefilter.
+# Removed w and h.
+# Replaced tl, tt, tr, tb with thr, thr1.
 #---------------
 # Fixed right, bottom when debug=true.
 # Changed default values for threshold.
@@ -60,71 +70,140 @@ When you have the saved frames set show to true to see only the saved frames.
 # Initial version.
 
 
-Function dldet(clip c, string "output", int "left", int "top", int "right", int "bottom", float "tl", float "tt", float "tr", float "tb", int "width", int "height", bool "debug", bool "show")
+Function dldet(clip c, string "output", int "n", float "thr", float "thr1", bool "left", bool "top", bool "right", bool "bottom", bool "debug", bool "show", string "prefilter")
 {
-    w = Default(width, 220) / 2
-    h = Default(height, 100) / 2
-    
-    c
-    StackVertical(Crop(0, 0, 0, h), Crop(0, Height() - h, 0, 0))
-    StackHorizontal(Crop(0, 0, w, 0), Crop(Width() - w, 0, 0, 0))
-    
+    Assert(!IsRGB(c) && IsPlanar(c), "dldet: the clip must be in YUV planar format.")
+    Assert(ComponentSize(c) == 1, "dldet: convert to 8-bit before to use the filter.")
+
+    y = ExtractY(c)
+
+    left = Default(left, true)
+    top = Default(top, true)
+    right = Default(right, true)
+    bottom = Default(bottom, true)
     debug = Default(debug, false)
-    
+    n = Default(n, 1)
+
+    Assert(n > 0, "dldet: n must be greater than 1.")
+
     if (debug)
     {
-        Assert((Defined(left) && !Defined(top) && !Defined(right) && !Defined(bottom)) \
-        || (Defined(top) && !Defined(left) && !Defined(right) && !Defined(bottom)) \
-        || (Defined(right) && !Defined(left) && !Defined(top) && !Defined(bottom)) \
-        || (Defined(bottom) && !Defined(left) && !Defined(top) && !Defined(right)), "dldet: When debug=true, only one from the arguments left, top, right, bottom must be defined.")
-        
-        y = solarCurve(ExtractY())
-        peak = BitLShift(1, BitsPerComponent) - 1
-        
-        ScriptClip(function [top, bottom, left, right, y, peak]()
+        sub = y
+
+        if (left)
         {
-            if (Defined(left)) { return Subtitle(String(LumaDifference(Crop(y, left, 0, 1, 0), Crop(y, left + 1, 0, 1, 0)) / peak), size=36) }
-            if (Defined(top)) { return Subtitle(String(LumaDifference(Crop(y, 0, top, 0, 1), Crop(y, 0, top + 1, 0, 1)) / peak), size=36) }
-            if (Defined(right)) { return Subtitle(String(LumaDifference(Crop(y, Width() - right, 0, 1, 0), Crop(y, Width() - (right + 1), 0, 1, 0)) / peak), size=36) }
-            if (Defined(bottom)) { return Subtitle(String(LumaDifference(Crop(y, 0, Height() - bottom, 0, 1), Crop(y, 0, Height() - (bottom + 1), 0, 1)) / peak), size=36) }
-        })
+            bb2 = ContinuityFixer(y, left=n, radius=n+3)
+            bb2 = (Defined(prefilter)) ? (prefilter == """""") ? bb2 : Eval(bb2, prefilter) : ApplyGradationCurves(bb2, lumaPoints="16,16,208,208,235,210").prefetch(2).solarCurve().prefetch(1).retinex_edgemask().prefetch(8)
+
+            sub = ScriptClip(sub, function [y, bb2, n]()
+                {
+                    return Subtitle(String(LumaDifference(Crop(y, n - 1, 0, 1, 0), Crop(y, n, 0, 1, 0))) + "\n" +\
+                        String(LumaDifference(Crop(bb2, n - 1, 0, 1, 0), Crop(bb2, n, 0, 1, 0))), lsp=1, align=4)
+                })
+        }
+        if (top)
+        {
+            bb2 = ContinuityFixer(y, top=n, radius=n+3)
+            bb2 = (Defined(prefilter)) ? (prefilter == """""") ? bb2 : Eval(bb2, prefilter) : ApplyGradationCurves(bb2, lumaPoints="16,16,208,208,235,210").prefetch(2).solarCurve().prefetch(1).retinex_edgemask().prefetch(8)
+
+            sub = ScriptClip(sub, function [y, bb2, n]()
+                {
+                    return Subtitle(String(LumaDifference(Crop(y, 0, n - 1, 0, 1), Crop(y, 0, n, 0, 1))) + "\n" +\
+                        String(LumaDifference(Crop(bb2, 0, n - 1, 0, 1), Crop(bb2, 0, n, 0, 1))), lsp=1, align=8)
+                })
+        }
+        if (right)
+        {
+            r = Width(y) - n
+
+            bb2 = ContinuityFixer(y, right=n, radius=n+3)
+            bb2 = (Defined(prefilter)) ? (prefilter == """""") ? bb2 : Eval(bb2, prefilter) : ApplyGradationCurves(bb2, lumaPoints="16,16,208,208,235,210").prefetch(2).solarCurve().prefetch(1).retinex_edgemask().prefetch(8)
+
+            sub = ScriptClip(sub, function [y, bb2, r]()
+                {
+                    return Subtitle(String(LumaDifference(Crop(y, r, 0, 1, 0), Crop(y, r - 1, 0, 1, 0))) + "\n"+\
+                        String(LumaDifference(Crop(bb2, r, 0, 1, 0), Crop(bb2, r - 1, 0, 1, 0))), lsp=1, align=6)
+                })
+        }
+        if (bottom)
+        {
+            b = Height(y) - n
+
+            bb2 = ContinuityFixer(y, bottom=n, radius=n+3)
+            bb2 = (Defined(prefilter)) ? (prefilter == """""") ? bb2 : Eval(bb2, prefilter) : ApplyGradationCurves(bb2, lumaPoints="16,16,208,208,235,210").prefetch(2).solarCurve().prefetch(1).retinex_edgemask().prefetch(8)
+
+            sub = ScriptClip(sub, function [y, bb2, b]()
+                {
+                    return Subtitle(String(LumaDifference(Crop(y, 0, b, 0, 1), Crop(y, 0, b - 1, 0, 1))) + "\n" +\
+                        String(LumaDifference(Crop(bb2, 0, b, 0, 1), Crop(bb2, 0, b - 1, 0, 1))), lsp=1, align=2, y=Height()-18)
+                })
+        }
+
+        return sub
     }
     else
     {
         show = Default(show, false)
-        
+
         if (!show)
         {
-            left = Default(left, 3)
-            top = Default(top, 3)
-            right = Default(right, 3)
-            bottom = Default(bottom, 3)
-            tl = Default(tl, 0.3)
-            tt = Default(tt, tl)
-            tr = Default(tr, tl)
-            tb = Default(tb, tl)
-            
-            ExtractY()
-            y = LinesLumaDiff(solarCurve(), left=left, top=top, right=right, bottom=bottom, tl=tl, tt=tt, tr=tr, tb=tb)
-            bbmod(ctop=top, cbottom=bottom, cleft=left, cright=right, thresh=1, blur=1)        
-            y1 = LinesLumaDiff(solarCurve(), left=left, top=top, right=right, bottom=bottom, tl=tl, tt=tt, tr=tr, tb=tb)
-            
-            ScriptClip(function [top, bottom, left, right, tl, tt, tr, tb, y, y1, output]()
+            thr = Default(thr, 0.019607)
+            thr1 = Default(thr1, 0.352941)
+            leftp = (left) ? n : 0
+            topp = (top) ? n : 0
+            rightp = (right) ? n : 0
+            bottomp = (bottom) ? n : 0
+
+            if (n > 1)
             {
-                y
-                
-                if (propGetType("_LinesDiff") > 0)
+                n_ = n - 1
+                cr = Crop(y, n_, n_, -n_, -n_)
+            }
+            else
+            {
+                cr = y
+            }
+
+            LinesLumaDiff(cr, output, left=leftp, top=topp, right=rightp, bottom=bottomp, tl=thr, tt=thr, tr=thr, tb=thr, flush=true)
+
+            bb2 = ContinuityFixer(cr, left=leftp, top=topp, right=rightp, bottom=bottomp, radius=3)
+            bb2 = (Defined(prefilter)) ? (prefilter == """""") ? bb2 : Eval(bb2, prefilter) : ApplyGradationCurves(bb2, lumaPoints="16,16,208,208,235,210").prefetch(2).solarCurve().prefetch(1).retinex_edgemask().prefetch(8)
+
+            bb2 = LinesLumaDiff(bb2, left=leftp, top=topp, right=rightp, bottom=bottomp, tl=thr1, tt=thr1, tr=thr1, tb=thr1)
+
+            ScriptClip(function [bb2, output]()
+            {
+                if (propGetType("LinesDiffLeft") == 0 && propGetType("LinesDiffTop") == 0 && propGetType("LinesDiffRight") == 0 && propGetType("LinesDiffBottom") == 0)
                 {
-                    _prop = propGetFloat("_LinesDiff")
-                    y1
-                    
-                    if (_prop / propGetFloat("_LinesDiff") < 1.2)
+                    if (propGetType(bb2, "LinesDiffLeft") > 0)
                     {
-                        RT_WriteFile(output, "%i", current_frame, append=true)
+                        RT_WriteFile(output, "%i %s %s", current_frame, "# left, diff:", String(propGetFloat(bb2, "LinesDiffLeft")), append=true)
+                    }
+                    else if (propGetType(bb2, "LinesDiffTop") > 0)
+                    {
+                        RT_WriteFile(output, "%i %s %s", current_frame, "# top, diff:", String(propGetFloat(bb2, "LinesDiffTop")), append=true)
+                    }
+                    else if (propGetType(bb2, "LinesDiffRight") > 0)
+                    {
+                        RT_WriteFile(output, "%i %s %s", current_frame, "# right, diff:", String(propGetFloat(bb2, "LinesDiffRight")), append=true)
+                    }
+                    else if (propGetType(bb2, "LinesDiffBottom") > 0)
+                    {
+                        RT_WriteFile(output, "%i %s %s", current_frame, "# bottom, diff:", String(propGetFloat(bb2, "LinesDiffBottom")), append=true)
                     }
                 }
-            })
+            }, after_frame=true)
         }
-        else { FrameSel(c, cmd=output, show=true) }
+        else
+        {
+            FrameSel(c, cmd=output, show=true)
+
+            return ScriptClip(function [output]()
+                {
+                    line_ = RT_ReadTxtFromFile(output, 1, current_frame)
+                    line1_ = MidStr(line_, FindStr(line_, "#"))
+                    Subtitle(RightStr(line1_, StrLen(line1_) - 2), x=2, y=24)
+                }, after_frame=true)
+        }
     }
 }
