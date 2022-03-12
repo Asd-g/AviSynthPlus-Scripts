@@ -39,7 +39,7 @@ The difference between lines could be displayed or the frames above threshold co
 # It only has effect when debug=false.
 #---------------
 # prefilter (default """ApplyGradationCurves(lumaPoints="16,16,208,208,235,210").prefetch(2).solarCurve().prefetch(1).retinex_edgemask().prefetch(8)"""): The prefiltered video.
-# If "": the non-filtered video is used.
+# If "": no prefiltered video.
 
 
 # Info about the usage
@@ -57,6 +57,8 @@ When you have the saved frames set show=true to see only the saved frames.
 
 
 ### Changelog ###
+#---------------
+# Disabled prefiltered video with prefilter="".
 #---------------
 # Changed the type of left, top, right, bottom.
 # Added parameter n and prefilter.
@@ -83,6 +85,7 @@ Function dldet(clip c, string "output", int "n", float "thr", float "thr1", bool
     bottom = Default(bottom, true)
     debug = Default(debug, false)
     n = Default(n, 1)
+    prefilter = Default(prefilter, """ ApplyGradationCurves(lumaPoints="16,16,208,208,235,210").prefetch(2).solarCurve().prefetch(1).retinex_edgemask().prefetch(8) """)
 
     Assert(n > 0, "dldet: n must be greater than 1.")
 
@@ -92,51 +95,89 @@ Function dldet(clip c, string "output", int "n", float "thr", float "thr1", bool
 
         if (left)
         {
-            bb2 = ContinuityFixer(y, left=n, radius=n+3)
-            bb2 = (Defined(prefilter)) ? (prefilter == """""") ? bb2 : Eval(bb2, prefilter) : ApplyGradationCurves(bb2, lumaPoints="16,16,208,208,235,210").prefetch(2).solarCurve().prefetch(1).retinex_edgemask().prefetch(8)
+            if (prefilter != """""")
+            {
+                bb2 = Eval(ContinuityFixer(y, left=n, radius=n+3), prefilter)
 
-            sub = ScriptClip(sub, function [y, bb2, n]()
+                sub = ScriptClip(sub, function [y, bb2, n]()
                 {
                     return Subtitle(String(LumaDifference(Crop(y, n - 1, 0, 1, 0), Crop(y, n, 0, 1, 0))) + "\n" +\
                         String(LumaDifference(Crop(bb2, n - 1, 0, 1, 0), Crop(bb2, n, 0, 1, 0))), lsp=1, align=4)
                 })
+            }
+            else
+            {
+                sub = ScriptClip(sub, function [y, n]()
+                {
+                    return Subtitle(String(LumaDifference(Crop(y, n - 1, 0, 1, 0), Crop(y, n, 0, 1, 0))), lsp=1, align=4)
+                })
+            }
         }
         if (top)
         {
-            bb2 = ContinuityFixer(y, top=n, radius=n+3)
-            bb2 = (Defined(prefilter)) ? (prefilter == """""") ? bb2 : Eval(bb2, prefilter) : ApplyGradationCurves(bb2, lumaPoints="16,16,208,208,235,210").prefetch(2).solarCurve().prefetch(1).retinex_edgemask().prefetch(8)
+            if (prefilter != """""")
+            {
+                bb2 = Eval(ContinuityFixer(y, top=n, radius=n+3), prefilter)
 
-            sub = ScriptClip(sub, function [y, bb2, n]()
+                sub = ScriptClip(sub, function [y, bb2, n]()
                 {
                     return Subtitle(String(LumaDifference(Crop(y, 0, n - 1, 0, 1), Crop(y, 0, n, 0, 1))) + "\n" +\
                         String(LumaDifference(Crop(bb2, 0, n - 1, 0, 1), Crop(bb2, 0, n, 0, 1))), lsp=1, align=8)
                 })
+            }
+            else
+            {
+                sub = ScriptClip(sub, function [y, n]()
+                {
+                    return Subtitle(String(LumaDifference(Crop(y, 0, n - 1, 0, 1), Crop(y, 0, n, 0, 1))), lsp=1, align=8)
+                })
+            }
+
+
         }
         if (right)
         {
             r = Width(y) - n
 
-            bb2 = ContinuityFixer(y, right=n, radius=n+3)
-            bb2 = (Defined(prefilter)) ? (prefilter == """""") ? bb2 : Eval(bb2, prefilter) : ApplyGradationCurves(bb2, lumaPoints="16,16,208,208,235,210").prefetch(2).solarCurve().prefetch(1).retinex_edgemask().prefetch(8)
+            if (prefilter != """""")
+            {
+                bb2 = Eval(ContinuityFixer(y, right=n, radius=n+3), prefilter)
 
-            sub = ScriptClip(sub, function [y, bb2, r]()
-                {
-                    return Subtitle(String(LumaDifference(Crop(y, r, 0, 1, 0), Crop(y, r - 1, 0, 1, 0))) + "\n"+\
-                        String(LumaDifference(Crop(bb2, r, 0, 1, 0), Crop(bb2, r - 1, 0, 1, 0))), lsp=1, align=6)
-                })
+                sub = ScriptClip(sub, function [y, bb2, r]()
+                    {
+                        return Subtitle(String(LumaDifference(Crop(y, r, 0, 1, 0), Crop(y, r - 1, 0, 1, 0))) + "\n"+\
+                            String(LumaDifference(Crop(bb2, r, 0, 1, 0), Crop(bb2, r - 1, 0, 1, 0))), lsp=1, align=6)
+                    })
+            }
+            else
+            {
+                sub = ScriptClip(sub, function [y, r]()
+                    {
+                        return Subtitle(String(LumaDifference(Crop(y, r, 0, 1, 0), Crop(y, r - 1, 0, 1, 0))), lsp=1, align=6)
+                    })
+            }
         }
         if (bottom)
         {
             b = Height(y) - n
 
-            bb2 = ContinuityFixer(y, bottom=n, radius=n+3)
-            bb2 = (Defined(prefilter)) ? (prefilter == """""") ? bb2 : Eval(bb2, prefilter) : ApplyGradationCurves(bb2, lumaPoints="16,16,208,208,235,210").prefetch(2).solarCurve().prefetch(1).retinex_edgemask().prefetch(8)
+            if (prefilter != """""")
+            {
+                bb2 = Eval(ContinuityFixer(y, bottom=n, radius=n+3), prefilter)
 
-            sub = ScriptClip(sub, function [y, bb2, b]()
-                {
-                    return Subtitle(String(LumaDifference(Crop(y, 0, b, 0, 1), Crop(y, 0, b - 1, 0, 1))) + "\n" +\
-                        String(LumaDifference(Crop(bb2, 0, b, 0, 1), Crop(bb2, 0, b - 1, 0, 1))), lsp=1, align=2, y=Height()-18)
-                })
+                sub = ScriptClip(sub, function [y, bb2, b]()
+                    {
+                        return Subtitle(String(LumaDifference(Crop(y, 0, b, 0, 1), Crop(y, 0, b - 1, 0, 1))) + "\n" +\
+                            String(LumaDifference(Crop(bb2, 0, b, 0, 1), Crop(bb2, 0, b - 1, 0, 1))), lsp=1, align=2, y=Height()-18)
+                    })
+            }
+            else
+            {
+                sub = ScriptClip(sub, function [y, b]()
+                    {
+                        return Subtitle(String(LumaDifference(Crop(y, 0, b, 0, 1), Crop(y, 0, b - 1, 0, 1))), lsp=1, align=2)
+                    })
+            }
         }
 
         return sub
@@ -166,33 +207,36 @@ Function dldet(clip c, string "output", int "n", float "thr", float "thr1", bool
 
             LinesLumaDiff(cr, output, left=leftp, top=topp, right=rightp, bottom=bottomp, tl=thr, tt=thr, tr=thr, tb=thr, flush=true)
 
-            bb2 = ContinuityFixer(cr, left=leftp, top=topp, right=rightp, bottom=bottomp, radius=3)
-            bb2 = (Defined(prefilter)) ? (prefilter == """""") ? bb2 : Eval(bb2, prefilter) : ApplyGradationCurves(bb2, lumaPoints="16,16,208,208,235,210").prefetch(2).solarCurve().prefetch(1).retinex_edgemask().prefetch(8)
-
-            bb2 = LinesLumaDiff(bb2, left=leftp, top=topp, right=rightp, bottom=bottomp, tl=thr1, tt=thr1, tr=thr1, tb=thr1)
-
-            ScriptClip(function [bb2, output]()
+            if (prefilter != """""")
             {
-                if (propGetType("LinesDiffLeft") == 0 && propGetType("LinesDiffTop") == 0 && propGetType("LinesDiffRight") == 0 && propGetType("LinesDiffBottom") == 0)
+                bb2 = ContinuityFixer(cr, left=leftp, top=topp, right=rightp, bottom=bottomp, radius=3)
+                bb2 = (Defined(prefilter)) ? (prefilter == """""") ? bb2 : Eval(bb2, prefilter) : ApplyGradationCurves(bb2, lumaPoints="16,16,208,208,235,210").prefetch(2).solarCurve().prefetch(1).retinex_edgemask().prefetch(8)
+
+                bb2 = LinesLumaDiff(bb2, left=leftp, top=topp, right=rightp, bottom=bottomp, tl=thr1, tt=thr1, tr=thr1, tb=thr1)
+
+                ScriptClip(function [bb2, output]()
                 {
-                    if (propGetType(bb2, "LinesDiffLeft") > 0)
+                    if (propGetType("LinesDiffLeft") == 0 && propGetType("LinesDiffTop") == 0 && propGetType("LinesDiffRight") == 0 && propGetType("LinesDiffBottom") == 0)
                     {
-                        RT_WriteFile(output, "%i %s %s", current_frame, "# left, diff:", String(propGetFloat(bb2, "LinesDiffLeft")), append=true)
+                        if (propGetType(bb2, "LinesDiffLeft") > 0)
+                        {
+                            RT_WriteFile(output, "%i %s %s", current_frame, "# left, diff:", String(propGetFloat(bb2, "LinesDiffLeft")), append=true)
+                        }
+                        else if (propGetType(bb2, "LinesDiffTop") > 0)
+                        {
+                            RT_WriteFile(output, "%i %s %s", current_frame, "# top, diff:", String(propGetFloat(bb2, "LinesDiffTop")), append=true)
+                        }
+                        else if (propGetType(bb2, "LinesDiffRight") > 0)
+                        {
+                            RT_WriteFile(output, "%i %s %s", current_frame, "# right, diff:", String(propGetFloat(bb2, "LinesDiffRight")), append=true)
+                        }
+                        else if (propGetType(bb2, "LinesDiffBottom") > 0)
+                        {
+                            RT_WriteFile(output, "%i %s %s", current_frame, "# bottom, diff:", String(propGetFloat(bb2, "LinesDiffBottom")), append=true)
+                        }
                     }
-                    else if (propGetType(bb2, "LinesDiffTop") > 0)
-                    {
-                        RT_WriteFile(output, "%i %s %s", current_frame, "# top, diff:", String(propGetFloat(bb2, "LinesDiffTop")), append=true)
-                    }
-                    else if (propGetType(bb2, "LinesDiffRight") > 0)
-                    {
-                        RT_WriteFile(output, "%i %s %s", current_frame, "# right, diff:", String(propGetFloat(bb2, "LinesDiffRight")), append=true)
-                    }
-                    else if (propGetType(bb2, "LinesDiffBottom") > 0)
-                    {
-                        RT_WriteFile(output, "%i %s %s", current_frame, "# bottom, diff:", String(propGetFloat(bb2, "LinesDiffBottom")), append=true)
-                    }
-                }
-            }, after_frame=true)
+                }, after_frame=true)
+            }
         }
         else
         {
