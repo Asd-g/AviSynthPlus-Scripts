@@ -6,6 +6,12 @@ Banding detection with CAMBI. The video is split by scenes and then every scene 
 ### Required filters: RT_Stats, FrameSel, VMAF, mvtools2, RoboCrop, AutoResize.
 
 
+### Note: Use firstly a short sample with banding to tune the threshold.
+
+
+### Note1: It's recommended the video to has SDR. CAMBI is not tuned for HDR.
+
+
 ### Steps to follow:
 
 1) Keep settings.avs, sc.avs, bd.avs, SCMC_.avs and bandDet.bat together (whatever location you prefer).
