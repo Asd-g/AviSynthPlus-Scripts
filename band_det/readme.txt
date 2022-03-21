@@ -3,7 +3,7 @@ Banding detection with CAMBI. The video is split by scenes and then every scene 
 #################
 
 
-### Required filters: RT_Stats, FrameSel, VMAF, mvtools2, RoboCrop, AutoResize.
+### Required filters: RT_Stats, FrameSel, VMAF, mvtools2, RoboCrop, AutoResize, grunt.
 
 
 ### Note: Use firstly a short sample with banding to tune the threshold.
@@ -22,16 +22,16 @@ File containing the scenes will be created in this new folder.
 For every scene cambi will run and it will create a log file. If mean/max are above the threshold this scene will be saved/appended in new file "final.txt".
 6) After the process complete, you can:
 - load all scenes from "final.txt":
-#source
-#FrameSel(cmd="path_to_final.txt", show=true)
+source
+FrameSel(cmd="path_to_final.txt", show=true)
 - load specific scene from "final.txt":
-#source
-#sc = RT_ReadTxtFromFile("path_to_final.txt", 1, x) # x - the number of the line with the scene (starting from 0)
-#FrameSel(scmd=sc, show=true)
-- load the source with marked frames from "final.txt"
-#source
-#fr = FrameSel(cmd="path_to_final.txt")
-#FrameRep(fr, cmd="path_to_final.txt", show=true) # all frames will have subtitle with the frame number but these that are detected with banding from "final.txt" will have additional text ("Using x")
+source
+sc = RT_ReadTxtFromFile("path_to_final.txt", 1, x) # x - the number of the line with the scene (starting from 0)
+FrameSel(scmd=sc, show=true)
+- load the source with filered only the frames from "final.txt"
+source
+fr = FrameSel(cmd="path_to_final.txt").some_filter # some_filter is applied only for the scenes in "final.txt"
+FrameRep(fr, cmd="path_to_final.txt", show=true) # return full video with the filtered scenes from above line. show=true will display subtitle with the frame number and the filtered scenes will have additional text ("Using x")
 
 
 ### Some additional info
