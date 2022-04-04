@@ -23,7 +23,7 @@ source = FFVideoSource(VideoFileName)
 ################################
 
 ################################
-# OPTIONAL SETTINGS (Usually you shouldn't change it because defaults should be ok)
+# OPTIONAL SETTINGS
 ################################
 
 
@@ -56,6 +56,13 @@ threshoold = 4.0
 # Whether the threshold is compared to 'main' or 'max'
 # If 'mean' is chosen, there is an additional check - if the CAMBI mean is > 0.1 and if 'mean / harmonic_mean > 2.0' the scene will be saved.
 check = "mean"
+
+# Lower values give more weight of the scenes with fast motion
+topk = 0.5
+
+# Lower values give more weight of the dark areas/frames
+# If lower value than the default one is used, usually threshold should be changed to higher than the default one
+tvi_threshold = 0.125
 
 
 ################################

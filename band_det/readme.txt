@@ -6,7 +6,7 @@ Banding detection with CAMBI. The video is split by scenes and then every scene 
 ### Required filters: RT_Stats, FrameSel, VMAF, mvtools2, RoboCrop, AutoResize, grunt.
 
 
-### Note: Use firstly a short sample with banding to tune the threshold.
+### Note: Use firstly a short sample with banding to tune the cambi settings. If the cambi score for a scene with banding is 0, this usually mean that "tvi_threshold" should be lower.
 
 
 ### Note1: It's recommended the video to has SDR. CAMBI is not tuned for HDR.
