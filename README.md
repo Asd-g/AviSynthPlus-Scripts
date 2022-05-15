@@ -1,6 +1,5 @@
 ##### Few scripts for AviSynth+ (for full info read the scripts):
 
-- AdaptiveGrain - it uses adaptive mask based on frame and pixels brightness to apply grain. More info included in the script.
 - AddBordersMod - due to MPEG-2 subsampling dirty lines / chroma bleeding could appear when AddBorders is used (more visible when the area is very saturared).
 - AnimeMask - port of VapourSynth AnimeMask.
 - AnimeMask2 - port of VapourSynth AnimeMask2.
