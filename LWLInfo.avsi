@@ -73,10 +73,17 @@ false (0)
 
 
 ### Changelog ###
+# - Added new D2VSource frame properties (_FieldOperation, _FieldOrder, _Film, _ProgressiveFrame, _RFF, _TFF).
+# - Updated _AspectRatio type for the latest D2VSource.
+####
 # - Changed the default value of y when align 4/5/6.
+####
 # - Allowed user defined runtime variables.
+####
 # - Changed parameters from global to local. Changed default values - only framenum and picturetype are true.
+####
 # - Added the other frame properties than picture type (_PictType) - _DurationNum, _DurationDen, _AbsoluteTime (FFMS2 only), _ColorRange (LSMASHSource/FFMS2), _Primaries (LSMASHSource/FFMS2), _Transfer (LSMASHSource/FFMS2), _Matrix, _ChromaLocation (LSMASHSource/FFMS2), _FieldBased, _SARNum (LSMASHSource/FFMS2), _SARDen (LSMASHSource/FFMS2), MasteringDisplayPrimariesX (LSMASHSource/FFMS2), MasteringDisplayPrimariesY (LSMASHSource/FFMS2), MasteringDisplayWhitePointX (LSMASHSource/FFMS2), MasteringDisplayWhitePointY (LSMASHSource/FFMS2), MasteringDisplayMinLuminance (LSMASHSource/FFMS2), MasteringDisplayMaxLuminance (LSMASHSource/FFMS2), ContentLightLevelMax (LSMASHSource/FFMS2), ContentLightLevelAverage (LSMASHSource/FFMS2), _AspectRatio (D2VSource), _GOPNumber (D2VSource), _GOPPosition (D2VSource), _GOPClosed (D2VSource), _EncodedFrameTop (D2VSource), _EncodedFrameBottom (D2VSource), _QuantsAverage (D2VSource), _QuantsMin (D2VSource), _QuantsMax (D2VSource).
+####
 # - Initial version.
 
 
@@ -112,6 +119,12 @@ Function LWLInfo(
 \ bool "quantsavg",
 \ bool "quantsmin",
 \ bool "quantsmax",
+\ bool "fieldoperation",
+\ bool "fieldorder",
+\ bool "film",
+\ bool "progressiveframe",
+\ bool "rff",
+\ bool "tff",
 \ float "x",
 \ float "y",
 \ string "font",
@@ -208,7 +221,7 @@ Function LWLInfo(
         if ("""+ String(contentlightlevelmax) +""") { if (propGetType("ContentLightLevelMax") > 0) { temp_prop = temp_prop + "Content LightLevel Max: " + String(propGetAny("ContentLightLevelMax")) + "\n" } }
         if ("""+ String(contentlightlevelaverage) +""") { if (propGetType("ContentLightLevelAverage") > 0) { temp_prop = temp_prop + "Content Light Level Average: " + String(propGetAny("ContentLightLevelAverage")) + "\n" } }
 
-        if ("""+ String(aspectratio) +""") { if (propGetType("_AspectRatio") > 0) { temp_prop = temp_prop + "Aspect Ratio: " + String(propGetString("_AspectRatio")) + "\n" } }
+        if ("""+ String(aspectratio) +""") { if (propGetType("_AspectRatio") > 0) { temp_prop = temp_prop + "Aspect Ratio: " + String(propGetAsArray("_AspectRatio")[0]) + " " + String(propGetAsArray("_AspectRatio")[1]) + "\n" } }
         if ("""+ String(gopnumber) +""") { if (propGetType("_GOPNumber") > 0) { temp_prop = temp_prop + "GOP Number: " + String(propGetAsArray("_GOPNumber")[0]) + " (" + String(propGetAsArray("_GOPNumber")[1]) + ")" + "\n" } }
         if ("""+ String(gopposition) +""") { if (propGetType("_GOPPosition") > 0) { temp_prop = temp_prop + "GOP Position: " + String(propGetInt("_GOPPosition")) + "\n" } }
         if ("""+ String(gopclosed) +""") { if (propGetType("_GOPClosed") > 0) { temp_prop = temp_prop + "GOP Closed: " + String(propGetInt("_GOPClosed")) + "\n" } }
@@ -217,6 +230,12 @@ Function LWLInfo(
         if ("""+ String(quantsavg) +""") { if (propGetType("_QuantsAverage") > 0) { temp_prop = temp_prop + "Quants Average: " + String(propGetInt("_QuantsAverage")) + "\n" } }
         if ("""+ String(quantsmin) +""") { if (propGetType("_QuantsMin") > 0) { temp_prop = temp_prop + "Quants Min: " + String(propGetInt("_QuantsMin")) + "\n" } }
         if ("""+ String(quantsmax) +""") { if (propGetType("_QuantsMax") > 0) { temp_prop = temp_prop + "Quants Max: " + String(propGetInt("_QuantsMax")) + "\n" } }
+        if ("""+ String(fieldoperation) +""") { if (propGetType("_FieldOperation") > 0) { temp_prop = temp_prop + "Field Operation: " + String(propGetInt("_FieldOperation")) + "\n" } }
+        if ("""+ String(fieldorder) +""") { if (propGetType("_FieldOrder") > 0) { temp_prop = temp_prop + "Field Order: " + String(propGetInt("_FieldOrder")) + "\n" } }
+        if ("""+ String(film) +""") { if (propGetType("_Film") > 0) { temp_prop = temp_prop + "Film: " + String(propGetInt("_Film")) + "\n" } }
+        if ("""+ String(progressiveframe) +""") { if (propGetType("_ProgressiveFrame") > 0) { temp_prop = temp_prop + "Progressive Frame: " + String(propGetInt("_ProgressiveFrame")) + "\n" } }
+        if ("""+ String(rff) +""") { if (propGetType("_RFF") > 0) { temp_prop = temp_prop + "RFF: " + String(propGetInt("_RFF")) + "\n" } }
+        if ("""+ String(tff) +""") { if (propGetType("_TFF") > 0) { temp_prop = temp_prop + "TFF: " + String(propGetInt("_TFF")) + "\n" } }
 
     return Subtitle(temp_prop, x=x_, y=y_, font=font_, size=size_, text_color=textcolor_, halo_color=halocolor_, align=align_, spc=spc_, lsp=lsp_, font_width=fontwidth_, font_angle=fontangle_) """, after_frame=true)
 }
