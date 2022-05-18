@@ -29,6 +29,5 @@
 - solarCurve - function similar to Histogram(mode="luma").
 - spline36resizemod_ - Spline36Resize for MPEG-2 chroma placement.
 - SSIM_downsample - port of the VapourSynth SSIM_downsample.
-- SupT - based on https://forum.doom9.org/showpost.php?p=1866983&postcount=7
 - Tonemapper - script for tonemapping.
 - vsSSIM - port of the VapourSynth SSIM.
