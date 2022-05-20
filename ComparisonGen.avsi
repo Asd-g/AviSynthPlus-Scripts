@@ -183,8 +183,6 @@ Function ComparisonGen(val c, string_array "image_file", val_array "frame_type",
                 copy_clip = c[i]
                 c = ArraySet(c, Trim(copy_clip, 0, fnum - 1), i)
             }
-
-            Trim(c[i], 0, fnum - 1)
         }
     }
 
