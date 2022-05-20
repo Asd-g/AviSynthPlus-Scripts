@@ -16,6 +16,7 @@ source = FFVideoSource(VideoFileName)
 #source = Trim(source, 0,-1000)
 
 # Resize the video if the final resolution for encoding is different
+# For HDR video - always resize to 1080.
 #source1 = source.Resizer(x, y)
 
 
@@ -27,10 +28,10 @@ source = FFVideoSource(VideoFileName)
 ################################
 
 
-# The location of the generated file containing the range of the scenes
+# The location of the generated file containing the range of the scenes.
 FolderName = RT_FilenameSplit(VideoFileName, 3) + "band_det"
 
-# The name of file containing the range of the scenes
+# The name of file containing the range of the scenes.
 sceneChangeFile = RT_FilenameSplit(VideoFileName, 12) + "_SC.txt"
 
 
@@ -50,19 +51,23 @@ thSCD1 = (BLOCKSIZE*BLOCKSIZE) * 64
 ### BANDING DETECTION RELATED
 
 
-# If CAMBI mean of the scene or max of the frame from the scene is above this threshold, the scene will be saved
-threshoold = 4.0
+# If CAMBI mean/harmonic_mean of the scene or max of the frame from the scene is above this threshold, the scene will be saved.
+# If EOTF is 'pq', lower value would be better (4.0).
+threshoold = 5.0
 
-# Whether the threshold is compared to 'main' or 'max'
-# If 'mean' is chosen, there is an additional check - if the CAMBI mean is > 0.1 and if 'mean / harmonic_mean > 2.0' the scene will be saved.
-check = "mean"
+# Whether the threshold is compared to 'mean', 'harmonic_mean', 'max' or 'mix'.
+check = "mix"
 
-# Lower values give more weight of the scenes with fast motion
+# Lower values give more weight of the scenes with fast motion.
 topk = 0.5
 
-# Lower values give more weight of the dark areas/frames
-# If lower value than the default one is used, usually threshold should be changed to higher than the default one
-tvi_threshold = 0.125
+# Lower values give more weight of the dark areas/frames.
+# If EOTF is 'pq', lower value should be used (0.01).
+tvi_threshold = 0.019
+
+# The EOTF used to compute the visibility thresholds.
+# Possible values: bt1886 and pq.
+eotf = "bt1886"
 
 
 ################################
