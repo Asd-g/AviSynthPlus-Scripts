@@ -1,7 +1,7 @@
 ### A script for saving images from up to 5 clips.
 
 
-### Requirements - AviSynth+ >= r3442, avsresize, RT_Stats.
+### Requirements - AviSynth+ >= r3573, avsresize, RT_Stats.
 
 
 ### Usage ###
@@ -13,6 +13,7 @@
 # c: Input clips.
 # Type of array.
 # Clips must be between 2..5.
+# If the clips have different length, the shortest length is used for all clips.
 #---------------
 # image_file (default ["%06d_0.png", "%06d_1.png", "%06d_2.png", "%06d_3.png", "%06d_4.png"]): The path+filename of the new saved images.
 # Type of array.
@@ -83,7 +84,7 @@ ComparisonGen([s, e])
 s=FFVideoSource(clip1).Crop(0, 148, -0, -148).LWLinfo()
 e=FFVideoSource(clip2).LWLinfo()
 ComparisonGen([s, e], frame_type=["I", "B"])
-# Images will be saved when clip1 frame type is 'I' and clip2 frame type is 'B'. 
+# Images will be saved when clip1 frame type is 'I' and clip2 frame type is 'B'.
 ###
 ###
 s=FFVideoSource(clip1).Crop(0, 148, -0, -148).LWLinfo()
@@ -118,6 +119,8 @@ Note - if AvsPmod is used and default s_image_file and e_image_file are used, th
 
 
 ### Changelog ###
+#---------------
+# Allowed clips with different length.
 #---------------
 # Changed default values of image_file.
 # Changed image_file type from val to string_array.
@@ -154,27 +157,51 @@ Function ComparisonGen(val c, string_array "image_file", val_array "frame_type",
 {
     Assert(ArraySize(c) >= 2, "ComparisonGen: at least two clips are required.")
     Assert(ArraySize(c) <= 5, "ComparisonGen: maximum 5 clips are supported.")
-    
+
+    fnum = [FrameCount(c[0]), FrameCount(c[0]), FrameCount(c[0]), FrameCount(c[0]), FrameCount(c[0])]
+    fnum_ch = 0
+
     for (i = 1, ArraySize(c) - 1)
     {
-        Assert(FrameCount(c[0]) == FrameCount(c[i]), "ComparisonGen: clips must have same total number of frames.")
+        if (fnum[0] != FrameCount(c[i]))
+        {
+            fnum_ch = 1
+            fnum = ArraySet(fnum, FrameCount(c[i]), i)
+        }
+
         Assert(PixelType(c[0]) == PixelType(c[i]), "ComparisonGen: clips must have same pixel type.")
     }
-    
+
+    if (fnum_ch == 1)
+    {
+        fnum = Min(fnum[0], fnum[1], fnum[2], fnum[3], fnum[4])
+
+        for (i = 0, ArraySize(c) - 1)
+        {
+            if (FrameCount(c[i]) != fnum)
+            {
+                copy_clip = c[i]
+                c = ArraySet(c, Trim(copy_clip, 0, fnum - 1), i)
+            }
+
+            Trim(c[i], 0, fnum - 1)
+        }
+    }
+
     if (Defined(image_file))
     {
         Assert(ArraySize(c) == ArraySize(image_file), "ComparisonGen: more or less 'image_file' given than there are clips.")
     }
-    
+
     _image = Default(image_file, (ArraySize(c) == 2) ? ["%06d_0.png", "%06d_1.png"] :
     \ (ArraySize(c) == 3) ? ["%06d_0.png", "%06d_1.png", "%06d_2.png"] :
     \  (ArraySize(c) == 4) ? ["%06d_0.png", "%06d_1.png", "%06d_2.png", "%06d_3.png"] :
     \ ["%06d_0.png", "%06d_1.png", "%06d_2.png", "%06d_3.png", "%06d_4.png"])
-    
+
     if (Defined(frame_type))
     {
         Assert(ArraySize(c) == ArraySize(frame_type), "ComparisonGen: more or less 'frame_type' given than there are clips.")
-        
+
         for (i = 0, ArraySize(frame_type) - 1)
         {
             Assert((IsInt(frame_type[i]) && frame_type[i] > 0 && frame_type[i] <= 4) || (IsString(frame_type[i]) && lcase(frame_type[i]) == "i") || (IsString(frame_type[i]) && lcase(frame_type[i]) == "p") || (IsString(frame_type[i]) && lcase(frame_type[i]) == "b") || (IsString(frame_type[i]) && lcase(frame_type[i]) == "pb"), """ComparisonGen: 'frame_type' values must be between 1..4 or "I", "P", "B", "PB".""")
@@ -184,43 +211,43 @@ Function ComparisonGen(val c, string_array "image_file", val_array "frame_type",
     _types = Default(frame_type, (ArraySize(c) == 2) ? [4, 3] :
     \ (ArraySize(c) == 3) ? [4, 3, 3] :
     \ (ArraySize(c) == 4) ? [4, 3, 3, 3] :
-    \ [4, 3, 3, 3, 3])          
+    \ [4, 3, 3, 3, 3])
 
     matrix = Default(matrix, "709=>rgb")
     pixel_type = Default(pixel_type, "RGBP")
-    
+
     check_type = Default(!Defined(pframes_file) ? true : check_type, true)
-    
+
     n = Default(n, 10)
     offset_coef = Default(offset_coef, 0.05)
     offset = Int(FrameCount(c[0]) * offset_coef)
-    
+
     if (!Defined(pframes_file) || (Defined(pframes_file) && check_type))
     {
         frames_file = (!Defined(pframes_file)) ? (RT_GetSystemEnv("temp") + "\" + "frames_file.txt") : pframes_file
         _filedir = RT_FilenameSplit(frames_file, 3)
-    
+
         if (!Defined(pframes_file))
         {
             _fnw(FrameCount(c[0]), n, offset, frames_file)
         }
-        
+
         for (i = 0, RT_FileQueryLines(frames_file) - 1)
         {
             _fwsingle(_selectframes(c, Int(Value(RT_ReadTxtFromFile(frames_file, 1, i)))), _filedir, _types, i)
-                            
+
             if (Exist(_filedir + "_forsave.txt"))
             {
                 RT_WriteFile(_filedir + "_frames_for_save.txt", "%i", Int(Value(RT_ReadTxtFromFile(frames_file, 1, i))), append=true)
                 RT_FileDelete(_filedir + "_forsave.txt")
             }
-        
+
             While (Exist(_filedir + "_notmatiching.txt"))
             {
-                _checktemp = (!Exist(_filedir + "_checkagain.txt")) ? Int(Value(RT_ReadTxtFromFile(frames_file, 1, i))) : Int(Value(RT_ReadTxtFromFile(_filedir + "_checkagain.txt", 1, 0)))                
+                _checktemp = (!Exist(_filedir + "_checkagain.txt")) ? Int(Value(RT_ReadTxtFromFile(frames_file, 1, i))) : Int(Value(RT_ReadTxtFromFile(_filedir + "_checkagain.txt", 1, 0)))
                 RT_WriteFile(_filedir + "_checkagain.txt", "%i", _checktemp + 1)
                 RT_FileDelete(_filedir + "_notmatiching.txt")
-                
+
                 lastframe = Int(Value(RT_ReadTxtFromFile(_filedir + "_checkagain.txt", 1, 0))) <= FrameCount(c[0]) - 1
                 if (!lastframe)
                 {
@@ -230,7 +257,7 @@ Function ComparisonGen(val c, string_array "image_file", val_array "frame_type",
 
                 _fwsingle(_selectframes(c, Int(Value(RT_ReadTxtFromFile(_filedir + "_checkagain.txt", 1, 0)))), _filedir, _types, i)
             }
-            
+
             if (Exist(_filedir + "_forsave.txt"))
             {
                 RT_WriteFile(_filedir + "_frames_for_save.txt", "%i", Int(Value(RT_ReadTxtFromFile(_filedir + "_checkagain.txt", 1, 0))), append=true)
@@ -239,9 +266,9 @@ Function ComparisonGen(val c, string_array "image_file", val_array "frame_type",
             }
         }
     }
-    
+
     _ffs = (check_type) ? _filedir + "_frames_for_save.txt" : pframes_file
-    
+
     if (IsRGB(c[0])) {
         for (i = 0, ArraySize(c) - 1)
         {
@@ -255,17 +282,17 @@ Function ComparisonGen(val c, string_array "image_file", val_array "frame_type",
             _simage(z_ConvertFormat(FrameSel(c[i], cmd=_ffs), pixel_type=pixel_type, colorspace_op=matrix, resample_filter_uv="spline36", dither_type="error_diffusion"), _image[i])
         }
     }
-    
+
     if (check_type && Exist(_filedir + "_frames_for_save.txt")) { RT_FileDelete(_filedir + "_frames_for_save.txt") }
     if (!Defined(pframes_file)) { RT_FileDelete(frames_file) }
-    
+
     Return MessageClip("Done.")
 }
 
 Function _fnw(int _framec, int n, int offset, string frames_file)
-{ 
+{
     RT_WriteFile(frames_file, "%i", offset)
-    
+
     for (i = 1, n - 1)
     {
         RT_WriteFile(frames_file, "%i", Int(Value(RT_ReadTxtFromFile(frames_file, 1, i - 1)) + _framec / n), append=true)
@@ -288,11 +315,11 @@ Function _fwsingle(val c, string _filedir, val frame_types, int _framen)
             sP = (((IsInt(frame_types[0]) && frame_types[0] == 2) || (IsString(frame_types[0]) && lcase(frame_types[0]) == "p")) && (String(propGetString("_PictType")) == "P")) ? true : false
             sB = (((IsInt(frame_types[0]) && frame_types[0] == 3) || (IsString(frame_types[0]) && lcase(frame_types[0]) == "b")) && (String(propGetString("_PictType")) == "B")) ? true : false
             sPB = (((IsInt(frame_types[0]) && frame_types[0] == 4) || (IsString(frame_types[0]) && lcase(frame_types[0]) == "pb")) && (String(propGetString("_PictType")) == "P" || String(propGetString("_PictType")) == "B")) ? true : false
-            
+
             if (sI || sP || sB || sPB)
             {
                 check = 1
-                                
+
                 for (j = 1, ArraySize(c) - 1)
                 {
                     c[j]
@@ -300,13 +327,13 @@ Function _fwsingle(val c, string _filedir, val frame_types, int _framen)
                     eP = (((IsInt(frame_types[j]) && frame_types[j] == 2) || (IsString(frame_types[j]) && lcase(frame_types[j]) == "p")) && (String(propGetString("_PictType")) == "P")) ? true : false
                     eB = (((IsInt(frame_types[j]) && frame_types[j] == 3) || (IsString(frame_types[j]) && lcase(frame_types[j]) == "b")) && (String(propGetString("_PictType")) == "B")) ? true : false
                     ePB = (((IsInt(frame_types[j]) && frame_types[j] == 4) || (IsString(frame_types[j]) && lcase(frame_types[j]) == "pb")) && (String(propGetString("_PictType")) == "P" || String(propGetString("_PictType")) == "B")) ? true : false
-                    
+
                     if (eI || eP || eB || ePB)
                     {
                         check = check + j
                     }
                 }
-            
+
                 if ((check == 2 && ArraySize(c) == 2) || (check == 4 && ArraySize(c) == 3) || (check == 7 && ArraySize(c) == 4) || (check == 11 && ArraySize(c) == 5))
                 {
                     RT_WriteFile(_filedir + "_forsave.txt", "%i", _framen)
@@ -321,14 +348,14 @@ Function _fwsingle(val c, string _filedir, val frame_types, int _framen)
                 RT_WriteFile(_filedir + "_notmatiching.txt", "%i", _framen)
             }
         }, after_frame=true)
-            
+
     RT_AverageLuma(n=_framen, w=1, h=1)
 }
 
 function _simage (clip s, string image_file)
 {
     s
-    
+
     for (i = 0, FrameCount() - 1)
     {
         ImageWriter(image_file, start=i, end=i, type="png")
