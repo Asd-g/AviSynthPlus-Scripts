@@ -4,8 +4,6 @@
 
 ##### Note: Use firstly a short sample with banding to tune the cambi settings. If the cambi score for a scene with banding is 0, this usually mean that "tvi_threshold" should be lower.
 
-##### Note1: It's recommended the video to has SDR. CAMBI is not tuned for HDR.
-
 ##### Steps to follow:
 
 1. Keep settings.avs, sc.avs, bd.avs, SCMC_.avs and bandDet.bat together (whatever location you prefer).
