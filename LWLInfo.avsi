@@ -73,6 +73,8 @@ false (0)
 
 
 ### Changelog ###
+# - Fixed missed default values.
+####
 # - Added new D2VSource frame properties (_FieldOperation, _FieldOrder, _Film, _ProgressiveFrame, _RFF, _TFF).
 # - Updated _AspectRatio type for the latest D2VSource.
 ####
@@ -167,6 +169,12 @@ Function LWLInfo(
     quantsavg = Default(quantsavg, false)
     quantsmin = Default(quantsmin, false)
     quantsmax = Default(quantsmax, false)
+    fieldoperation = Default(fieldoperation, false)
+    fieldorder = Default(fieldorder, false)
+    film = Default(film, false)
+    progressiveframe = Default(progressiveframe, false)
+    rff = Default(rff, false)
+    tff = Default(tff, false)
     font = Default(font, "Arial")
     size = Default(size, 18)
     textcolor = Default(textcolor, $FFFF00)
