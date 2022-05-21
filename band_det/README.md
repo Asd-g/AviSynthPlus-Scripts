@@ -2,9 +2,11 @@
 
 ##### Required filters: RT_Stats, FrameSel, VMAF, mvtools2, RoboCrop, AutoResize, grunt.
 
-##### Note: Use firstly a short sample with banding to tune the cambi settings. If the cambi score for a scene with banding is 0, this usually mean that "tvi_threshold" should be lower.
+###### Note: Use firstly a short sample with banding to tune the cambi settings. If the cambi score for a scene with banding is 0, this usually mean that "tvi_threshold" should be lower.
 
-##### Steps to follow:
+###### Note1: For HDR video you need to change in "BANDING DETECTION RELATED" section in settings.avs: `threshoold`, `tvi_threshold`, `eotf`.
+
+###### Steps to follow:
 
 1. Keep settings.avs, sc.avs, bd.avs, SCMC_.avs and bandDet.bat together (whatever location you prefer).
 2. Open settings.avs, and change the relevant settings.
