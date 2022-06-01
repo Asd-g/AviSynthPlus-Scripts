@@ -84,52 +84,52 @@ AutoResize(720, resizer="z_BicubicResize", args="b=-0.25, c=0.125") # Assume 192
 
 
 function AutoResize(clip c, val mode, int "left", int "top", int "right", int "bottom", string "resizer", string "dither_type", bool "fill_margins", bool "mod2", string "args")
-{    
+{
     left = default(left, 0)
     top = default(top, 0)
     right = default(right, 0)
     bottom = default(bottom, 0)
-    
+
     Assert(left >= 0, "AutoResize: left must be >= 0.")
     Assert(top >= 0, "AutoResize: top must be >= 0.")
     Assert(right <= 0, "AutoResize: right must be <= 0.")
     Assert(bottom <= 0, "AutoResize: bottom must be <= 0.")
-      
+
     resizer = default(resizer, "z_Spline36Resize")
     dither_type = default(dither_type,  "ordered")
     mod2 = default(mod2, false)
-    
-    newsize = IsString(mode) && lcase(mode) == "sd" ? _AutoResizeSD(c, top, bottom) : _AutoResizeHD(c, mode, left, top, right, bottom, mod2)    
-        
+
+    newsize = IsString(mode) && lcase(mode) == "sd" ? _AutoResizeSD(c, top, bottom) : _AutoResizeHD(c, mode, left, top, right, bottom, mod2)
+
     check_left = left > 0 && left % 2 != 0
     check_top = top > 0 && top % 2 != 0
     check_right = right < 0 && right % 2 != 0
     check_bottom = bottom < 0 && bottom % 2 != 0
-       
+
     crop_left = check_left ? left - 1 : left
     crop_top = check_top ? top - 1 : top
     crop_right = check_right ? right + 1 : right
     crop_bottom = check_bottom ? bottom + 1 : bottom
-    
+
     if (crop_left > 0 || crop_top > 0 || crop_right > 0 || crop_bottom > 0) { c = Crop(c, crop_left, crop_top, crop_right, crop_bottom) }
-    
+
     fill_margins = default(fill_margins, check_left || check_top || check_right || check_bottom ? true : false)
-    
+
     proc_left = check_left ? 1 : NOP()
     proc_top = check_top ? 1 : NOP()
     proc_right = check_right ? 1 : NOP()
     proc_bottom = check_bottom ? 1 : NOP()
     c = fill_margins ? FillMargins(c, proc_left, proc_top, proc_right, proc_bottom) : c
-    
+
     args = defined(args) ? ", " + args : ""
     resizer = lcase(resizer)
-    
+
     if (resizer == "dpid" || resizer == "dpidraw" || resizer == "fmtc_resample" || resizer == "resizeshader" || resizer == "ssim_downsample")
     {
         return eval(resizer + "(c," + newsize + args + ")")
     }
     else if (lcase(dither_type) != "no")
-    {    
+    {
         return eval(resizer + "(c," + newsize + ", src_left=proc_left, src_top=proc_top, src_width=-proc_right, src_height=-proc_bottom, dither=dither_type" + args + ")")
     }
     else
@@ -137,20 +137,20 @@ function AutoResize(clip c, val mode, int "left", int "top", int "right", int "b
         return eval(resizer + "(c," + newsize + ", src_left=proc_left, src_top=proc_top, src_width=-proc_right, src_height=-proc_bottom" + args + ")")
     }
 }
- 
+
 function _AutoResizeSD(clip c, int top, int bottom)
 {
     return String(720) + "," + String(Int(RoundHalfToEven_mod2(720 * (Float(Height(c) - top + bottom) / Width(c)))))
 }
- 
+
 function _AutoResizeHD(clip c, int mode, int left, int top, int right, int bottom, bool mod2)
 {
     size = Float(Width(c) - left + right) / (Height(c) - top + bottom)
     div = 16.0 / 9.0
 
     w = size <= div ? RoundHalfToEven_mod2(mode * size) : RoundHalfToEven_mod2(mode * div)
- 
+
     return String(Int(w)) + "," + String(size <= div ? mode :
         \ mod2 ? Int(RoundHalfToEven_mod2(w / size)) :
-            \ !Is420(c) ? Int(RoundHalfToEven(w / size)) : Int(RoundHalfToEven_mod2(w / size)))
+            \ !Is420(c) ? RoundHalfToEven(w / size) : Int(RoundHalfToEven_mod2(w / size)))
 }
