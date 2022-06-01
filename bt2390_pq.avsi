@@ -138,7 +138,7 @@ Function _dynamic(clip c, int "mdmaxl", int "tdmaxl", float "mdminl", float "tdm
             peak_nits = 0.2627 * RPlaneMax(_lin) + 0.678 * GPlaneMax(_lin) + 0.0593 * BPlaneMax(_lin)
             tdmaxl = min(pow((Defined(tdmaxl)) ? tdmaxl : 200.0, 1 + 1 / (peak_nits / (0.2627 * AverageR(_lin) + 0.678 * AverageG(_lin) + 0.0593 * AverageB(_lin)))), mdmaxl / 1.4)
             tdminl = Default(tdminl, mdminl)
-            gain_factor = (gain) ? Default(gain_factor, (peak_nits) < 0.1 ? 0 : max(2, Int(RoundHalfToEven(0.8 / peak_nits)))) : 0
+            gain_factor = (gain) ? Default(gain_factor, (peak_nits) < 0.1 ? 0 : max(2, RoundHalfToEven(0.8 / peak_nits))) : 0
 
             Assert(tdmaxl < mdmaxl, "bt2390_pq: tdmaxl must be less than mdmaxl.")
             Assert(tdminl >= mdminl, "bt2390_pq: tdminl must be equal or greater than mdminl.")
