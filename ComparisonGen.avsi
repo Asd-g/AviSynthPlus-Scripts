@@ -120,6 +120,9 @@ Note - if AvsPmod is used and default s_image_file and e_image_file are used, th
 
 ### Changelog ###
 #---------------
+# 1.0.0
+# Added check for frame property _PictType.
+#---------------
 # Allowed clips with different length.
 #---------------
 # Changed default values of image_file.
@@ -157,6 +160,7 @@ Function ComparisonGen(val c, string_array "image_file", val_array "frame_type",
 {
     Assert(ArraySize(c) >= 2, "ComparisonGen: at least two clips are required.")
     Assert(ArraySize(c) <= 5, "ComparisonGen: maximum 5 clips are supported.")
+    Assert(propGetType(c[0], "_PictType") > 0, "ComparisonGen: clip 1 doesn't have frame property _PictType.")
 
     fnum = [FrameCount(c[0]), FrameCount(c[0]), FrameCount(c[0]), FrameCount(c[0]), FrameCount(c[0])]
     fnum_ch = 0
@@ -170,6 +174,7 @@ Function ComparisonGen(val c, string_array "image_file", val_array "frame_type",
         }
 
         Assert(PixelType(c[0]) == PixelType(c[i]), "ComparisonGen: clips must have same pixel type.")
+        Assert(propGetType(c[i], "_PictType") > 0, "ComparisonGen: clip " + String(i + 1) + " doesn't have frame property _PictType.")
     }
 
     if (fnum_ch == 1)
