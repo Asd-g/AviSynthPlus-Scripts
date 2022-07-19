@@ -52,8 +52,14 @@ thSCD1 = (BLOCKSIZE*BLOCKSIZE) * 64
 
 
 # If CAMBI mean/harmonic_mean of the scene or max of the frame from the scene is above this threshold, the scene will be saved.
-# If EOTF is 'pq', lower value would be better (4.0).
-threshoold = 5.0
+# The value of 5 for 1080p resolution is reference. If the clip is resized (source1), this value should be changed according to the resolution.
+# If EOTF is 'pq', lower value would be better (4.0 for 1080p).
+val_ = 5 # 1080p
+#val_ = 5 * (3 / 6.75) # 480p
+#val_ = 5 * (3 / 5.625) # 576p
+#val_ = 5 * (3 / 4.5) # 720p
+#val_ = 5 * (3 / 1.5) # 2160p
+threshoold = val_
 
 # Whether the threshold is compared to 'mean', 'harmonic_mean', 'max' or 'mix'.
 check = "mix"

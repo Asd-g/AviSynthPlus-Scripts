@@ -2,6 +2,7 @@ Import("settings.avs")
 
 sceneChangeFile = FolderName + "\" + sceneChangeFile
 final_file = FolderName + "\" + "final.txt"
+zero_value = FolderName + "\" + "scene_cambi_zero.txt"
 
 source = (VarExist("source1")) ? source1 : source
 opt = "topk=" + String(topk) + " tvi_threshold=" + String(tvi_threshold) + " eotf=" + eotf
@@ -22,7 +23,7 @@ for (i = 0, RT_FileQueryLines(sceneChangeFile) - 1)
         thresh_ = Value(RightStr(MidStr(AllFileString, RT_FindStr(AllFileString, "mean"), 14), 8))
         if (thresh_ == 0.0)
         {
-            return RT_TxtWriteFile(RT_ReadTxtFromFile(sceneChangeFile, 1, i), FolderName + "\" + "USE_LOWER_tvi_threshold.txt", true)
+            RT_TxtWriteFile(RT_ReadTxtFromFile(sceneChangeFile, 1, i), zero_value, true)
         }
         else if (threshoold <= thresh_ || (thresh_ > 0.1 && thresh_ / Value(RightStr(MidStr(AllFileString, RT_FindStr(AllFileString, "harmonic_mean"), 23), 8)) > 2.0) ||
             \ (thresh_ > 1.0 && Value(RightStr(MidStr(AllFileString, RT_FindStr(AllFileString, "max"), 13), 8)) >= threshoold))
@@ -35,7 +36,7 @@ for (i = 0, RT_FileQueryLines(sceneChangeFile) - 1)
         thresh_ = Value(RightStr(MidStr(AllFileString, RT_FindStr(AllFileString, "mean"), 14), 8))
         if (thresh_ == 0.0)
         {
-            return RT_TxtWriteFile(RT_ReadTxtFromFile(sceneChangeFile, 1, i), FolderName + "\" + "USE_LOWER_tvi_threshold.txt", true)
+            RT_TxtWriteFile(RT_ReadTxtFromFile(sceneChangeFile, 1, i), zero_value, true)
         }
         if (threshoold <= thresh_)
         {
@@ -47,7 +48,7 @@ for (i = 0, RT_FileQueryLines(sceneChangeFile) - 1)
         thresh_ = Value(RightStr(MidStr(AllFileString, RT_FindStr(AllFileString, "harmonic_mean"), 23), 8))
         if (thresh_ == 0.0)
         {
-            return RT_TxtWriteFile(RT_ReadTxtFromFile(sceneChangeFile, 1, i), FolderName + "\" + "USE_LOWER_tvi_threshold.txt", true)
+            RT_TxtWriteFile(RT_ReadTxtFromFile(sceneChangeFile, 1, i), zero_value, true)
         }
         if (threshoold <= thresh_)
         {
@@ -59,7 +60,7 @@ for (i = 0, RT_FileQueryLines(sceneChangeFile) - 1)
         thresh_ = Value(RightStr(MidStr(AllFileString, RT_FindStr(AllFileString, "max"), 13), 8))
         if (thresh_ == 0.0)
         {
-            return RT_TxtWriteFile(RT_ReadTxtFromFile(sceneChangeFile, 1, i), FolderName + "\" + "USE_LOWER_tvi_threshold.txt", true)
+            RT_TxtWriteFile(RT_ReadTxtFromFile(sceneChangeFile, 1, i), zero_value, true)
         }
         if (threshoold <= thresh_)
         {
