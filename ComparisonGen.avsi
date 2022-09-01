@@ -12,7 +12,7 @@
 #---------------
 # c: Input clips.
 # Type of array.
-# Clips must be between 2..5.
+# Clips must be max 5.
 # If the clips have different length, the shortest length is used for all clips.
 #---------------
 # image_file (default ["%06d_0.png", "%06d_1.png", "%06d_2.png", "%06d_3.png", "%06d_4.png"]): The path+filename of the new saved images.
@@ -120,6 +120,10 @@ Note - if AvsPmod is used and default s_image_file and e_image_file are used, th
 
 ### Changelog ###
 #---------------
+# 1.0.1
+# Check for frame property _PictType only if check_type=true.
+# Allowed to save images only for one clip.
+#---------------
 # 1.0.0
 # Added check for frame property _PictType.
 #---------------
@@ -158,9 +162,7 @@ Note - if AvsPmod is used and default s_image_file and e_image_file are used, th
 
 Function ComparisonGen(val c, string_array "image_file", val_array "frame_type", string "pframes_file", int "n", float "offset_coef", string "matrix", string "pixel_type", bool "check_type")
 {
-    Assert(ArraySize(c) >= 2, "ComparisonGen: at least two clips are required.")
     Assert(ArraySize(c) <= 5, "ComparisonGen: maximum 5 clips are supported.")
-    Assert(propGetType(c[0], "_PictType") > 0, "ComparisonGen: clip 1 doesn't have frame property _PictType.")
 
     fnum = [FrameCount(c[0]), FrameCount(c[0]), FrameCount(c[0]), FrameCount(c[0]), FrameCount(c[0])]
     fnum_ch = 0
@@ -196,7 +198,8 @@ Function ComparisonGen(val c, string_array "image_file", val_array "frame_type",
         Assert(ArraySize(c) == ArraySize(image_file), "ComparisonGen: more or less 'image_file' given than there are clips.")
     }
 
-    _image = Default(image_file, (ArraySize(c) == 2) ? ["%06d_0.png", "%06d_1.png"] :
+    _image = Default(image_file, (ArraySize(c) == 1) ? ["%06d_0.png"] :
+    \ (ArraySize(c) == 2) ? ["%06d_0.png", "%06d_1.png"] :
     \ (ArraySize(c) == 3) ? ["%06d_0.png", "%06d_1.png", "%06d_2.png"] :
     \  (ArraySize(c) == 4) ? ["%06d_0.png", "%06d_1.png", "%06d_2.png", "%06d_3.png"] :
     \ ["%06d_0.png", "%06d_1.png", "%06d_2.png", "%06d_3.png", "%06d_4.png"])
@@ -211,7 +214,8 @@ Function ComparisonGen(val c, string_array "image_file", val_array "frame_type",
         }
     }
 
-    _types = Default(frame_type, (ArraySize(c) == 2) ? [4, 3] :
+    _types = Default(frame_type, (ArraySize(c) == 1) ? [4] :
+    \ (ArraySize(c) == 2) ? [4, 3] :
     \ (ArraySize(c) == 3) ? [4, 3, 3] :
     \ (ArraySize(c) == 4) ? [4, 3, 3, 3] :
     \ [4, 3, 3, 3, 3])
@@ -220,6 +224,11 @@ Function ComparisonGen(val c, string_array "image_file", val_array "frame_type",
     pixel_type = Default(pixel_type, "RGBP")
 
     check_type = Default(!Defined(pframes_file) ? true : check_type, true)
+
+    if (check_type)
+    {
+        Assert(propGetType(c[0], "_PictType") > 0, "ComparisonGen: clip 1 doesn't have frame property _PictType.")
+    }
 
     n = Default(n, 10)
     offset_coef = Default(offset_coef, 0.05)
@@ -304,7 +313,8 @@ Function _fnw(int _framec, int n, int offset, string frames_file)
 
 Function _selectframes(val c, int framenum)
 {
-    return (ArraySize(c) == 2) ? [Trim(c[0], framenum, -1), Trim(c[1], framenum, -1)] :
+    return (ArraySize(c) == 1) ? [Trim(c[0], framenum, -1)] :
+        \ (ArraySize(c) == 2) ? [Trim(c[0], framenum, -1), Trim(c[1], framenum, -1)] :
         \ (ArraySize(c) == 3) ? [Trim(c[0], framenum, -1), Trim(c[1], framenum, -1), Trim(c[2], framenum, -1)] :
         \ (ArraySize(c) == 4) ? [Trim(c[0], framenum, -1), Trim(c[1], framenum, -1), Trim(c[2], framenum, -1), Trim(c[3], framenum, -1)] :
         \ [Trim(c[0], framenum, -1), Trim(c[1], framenum, -1), Trim(c[2], framenum, -1), Trim(c[3], framenum, -1), Trim(c[4], framenum, -1)]
@@ -337,7 +347,7 @@ Function _fwsingle(val c, string _filedir, val frame_types, int _framen)
                     }
                 }
 
-                if ((check == 2 && ArraySize(c) == 2) || (check == 4 && ArraySize(c) == 3) || (check == 7 && ArraySize(c) == 4) || (check == 11 && ArraySize(c) == 5))
+                if (ArraySize(c) == 1 || (check == 2 && ArraySize(c) == 2) || (check == 4 && ArraySize(c) == 3) || (check == 7 && ArraySize(c) == 4) || (check == 11 && ArraySize(c) == 5))
                 {
                     RT_WriteFile(_filedir + "_forsave.txt", "%i", _framen)
                 }
