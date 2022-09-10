@@ -58,30 +58,19 @@ Function f3kpf(clip src, int "range", int "y", int "c", float "thr", float "elas
     y31 = (yp) ? 3 : 1
     c31 = (cp) ? 3 : 1
 
-    rg  = RemoveGrain(src, (yp) ? 11 : -1, (cp) ? 11 : -1).RemoveGrain((yp) ? 20 : -1, (cp) ? 0 : -1)
+    rg = RemoveGrain(src, (yp) ? 11 : -1, (cp) ? 11 : -1)
+    rg = RemoveGrain(rg, (yp) ? 20 : -1, (cp) ? 0 : -1)
     noise = mt_makediff(src, rg, y=y31, u=c31, v=c31)
-    rg  = mt_makediff(src, noise, y=y31, u=c31, v=c31)
+    rg = mt_makediff(src, noise, y=y31, u=c31, v=c31)
 
-    if (Defined(f3kdb_arg))
-    {
-        smooth = Eval("neo_f3kdb(rg, "+ string(range) +", "+ string(y) +", "+ string(c) +", "+ string(c) +", "+ string(0) +", "+ string(0) +", keep_tv_range="+ string(tv_range) +", "+ f3kdb_arg +")")
-    }
-    else
-    {
-        smooth = neo_f3kdb(rg, range, y, c, c, 0, 0, keep_tv_range=tv_range)
-    }
+    smooth = (Defined(f3kdb_arg)) ? Eval("neo_f3kdb(rg, "+ string(range) +", "+ string(y) +", "+ string(c) +", "+ string(c) +", "+ string(0) +", "+ string(0) +", keep_tv_range="+ string(tv_range) +", "+ f3kdb_arg +")") :
+        \ neo_f3kdb(rg, range, y, c, c, 0, 0, keep_tv_range=tv_range)
+
 
     if ((thr) > 0)
     {
-        if (Defined(limit_arg))
-        {
-
-            smooth = Eval("ex_limitdif(smooth, rg, thr="+ string(thr) +", elast="+ string(elast) +", y="+ string(y31) +", uv="+ string(c31) +", "+ limit_arg +")")
-        }
-        else
-        {
-            smooth = ex_limitdif(smooth, rg, thr=thr, elast=elast, y=y31, uv=c31)
-        }
+        smooth = (Defined(limit_arg)) ? Eval("ex_limitdif(smooth, rg, thr="+ string(thr) +", elast="+ string(elast) +", y="+ string(y31) +", uv="+ string(c31) +", "+ limit_arg +")") :
+            \ ex_limitdif(smooth, rg, thr=thr, elast=elast, y=y31, uv=c31)
     }
 
     output = mt_adddiff(smooth, noise, y=y31, u=c31, v=c31)
