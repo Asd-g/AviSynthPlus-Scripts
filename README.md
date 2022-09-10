@@ -20,6 +20,7 @@
 - GMSD - port of the VapourSynth GMSD.
 - GradFun3DBmod - based on GradFun2DBmod but it uses GradFun3 and support 10..16-bit clips.
 - IQA_downsample - downsampler for image quality assessment model.
+- lfdeband - f3kdb only on low frequencies.
 - LWLInfo - script displaying LSMASHSource/FFMS2/D2VSource frame properties.
 - MDSI - port of the VapourSynth MDSI.
 - MCTD_ - see the changelog in the script.
