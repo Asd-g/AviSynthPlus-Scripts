@@ -28,6 +28,7 @@
 - rainbow_smooth2 - see the changelog in the script.
 - retinex_edgemask.
 - RoundHalfToEven.
+- sc_stats_det - detection for red and blue scenes, and for scene exposure.
 - solarCurve - function similar to Histogram(mode="luma").
 - spline36resizemod_ - Spline36Resize for MPEG-2 chroma placement.
 - SSIM_downsample - port of the VapourSynth SSIM_downsample.
