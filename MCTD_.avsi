@@ -359,6 +359,8 @@
 ### CHANGELOG:
 ### ----------
 ###
+### Fixed sharpening internal masks. (high bit depth)
+###
 ### Fixed the high bit depth processing
 ### Replaced GradFun2DBmod with GradFun3DBmod
 ###
@@ -1343,8 +1345,10 @@ smP = (post==0)        ? smP
 
 
    ### MASKING
-   mM = (sharp==true||enhance==true||stabilize==true) ? mt_average(SAD_f1m,SAD_b1m,U=1,V=1).mt_lut(expr="x 1.6 ^",U=1,V=1) : NOP()
-   mE = (sharp==true||enhance==true||stabilize==true) ? mt_edge(smE,"prewitt",0,255,0,0,V=1,U=1).mt_lut(expr="x 1.8 ^",U=1,V=1).removegrain(4,-1).mt_inflate(U=1,V=1) : NOP()
+   mM_c = (BitsPerComponent(smE) == 8) ? 1.6 : (BitsPerComponent(smE) == 10) ? 1.40 : (BitsPerComponent(smE) == 12) ? 1.30 : (BitsPerComponent(smE) == 14) ? 1.23 : 1.2
+   mM = (sharp==true||enhance==true||stabilize==true) ? mt_average(SAD_f1m,SAD_b1m,U=1,V=1).mt_lut(expr="x "+ string(mM_c) +" ^",U=1,V=1) : NOP()
+   mE_c = (BitsPerComponent(smE) == 8) ? 1.8 : (BitsPerComponent(smE) == 10) ? 1.53 : (BitsPerComponent(smE) == 12) ? 1.40 : (BitsPerComponent(smE) == 14) ? 1.32 : 1.27
+   mE = (sharp==true||enhance==true||stabilize==true) ? mt_edge(smE,"prewitt",0,255,0,0,V=1,U=1).mt_lut(expr="x "+ string(mE_c) +" ^",U=1,V=1).removegrain(4,-1).mt_inflate(U=1,V=1) : NOP()
    mL = (sharp==true||enhance==true||stabilize==true) ? mt_logic(mM.invert(),mE,"min",U=1,V=1).removegrain(20,-1) : NOP()
    mF = (sharp==true||enhance==true||stabilize==true) ? mt_logic(mM,mE,"max",U=1,V=1).removegrain(20,-1) : NOP()
    mR = (sharp==true||enhance==true||stabilize==true) ? mE.removegrain(20,-1) : NOP()
@@ -1374,10 +1378,10 @@ smP = (post==0)        ? smP
    GFc = (enhance==true) ? (dbF!="internal") ? Eval("TTc."+dbF)
    \   :                   TTc.GradFun3DBmod(thr=GFthr,thrC=chroma?GFthr:1.0,mode=0,str=AGstr,strC=0.0,temp=temp,adapt=bias,mask=false,show=false)
    \   :                   TTc
-   FSc = (enhance==true||stabilize==true) ? useMMask ? MCPP_final_mt_merge(GFc,sL,mF,luma=chroma?true:false,U=chr31,V=chr31)
-   \                                                 : MCPP_final_mt_merge(GFc,sL,mR,luma=chroma?true:false,U=chr31,V=chr31)
+   FSc = (enhance==true||stabilize==true) ? useMMask ? mt_merge(GFc,sL,mF,luma=chroma?true:false,U=chr31,V=chr31)
+   \                                                 : mt_merge(GFc,sL,mR,luma=chroma?true:false,U=chr31,V=chr31)
    \                                      : GFc
-   PP  = (chroma==false) ? FSc.MCPP_final_mergechroma(internal?i:smP)
+   PP  = (chroma==false) ? FSc.mergechroma(internal?i:smP)
    \   :                   FSc
 
    return PP
@@ -1394,11 +1398,11 @@ PP = pp ? MCTDmod_PP( smP, i,
    \               chroma, settings, useMMask,
    \               f1v, b1v, f1c, b1c, true )
    \    : chroma ? smP
-   \             : smP.MCPP_final_MergeChroma(i)
+   \             : smP.MergeChroma(i)
 
 
 ### OUTPUT
-o = ((i.height) * 2 == PP.height) ? PP.MCPP_crop16(xf/2,yf/2,-xf/2,-yf/2) : PP.crop(xf/2,yf/2,-xf/2,-yf/2)
+o = PP.crop(xf/2,yf/2,-xf/2,-yf/2)
 o = (interlaced==true) ? o.weave() : o
 
 p1nr = Defined(p1nr) ? p1nr : "internal"
