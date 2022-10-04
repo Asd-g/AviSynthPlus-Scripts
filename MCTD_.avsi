@@ -1588,6 +1588,7 @@ return o
 # ------- Support functions for stacked high bit depth -------
 
 # ------- Copied from Dither package -------
+/*
 Function MCPP_get_msb(clip src){  return src.Crop(0, 0, src.Width, src.Height/2) }
 Function MCPP_get_lsb(clip src){  return src.Crop(0, src.Height/2, src.Width, src.Height/2) }
 Function MCPP_convert_8_to_16(clip src){ return StackVertical(src, BlankClip(src, pixel_type="YV12", color_yuv=0)) }
@@ -1647,6 +1648,7 @@ Function MCPP_final_MergeChroma(clip src1, clip src2)
 	src2 = (src1.height     == src2.height * 2) ? src2.MCPP_convert_8_to_16() : src2
 	return src1.MergeChroma(src2)
 }
+*/
 
 function MCTD_Luma_Rebuild(clip src, float "s0", float "c",int "uv", bool "lsb", bool "lsb_in", bool "lsb_out", int "mode"){
     lsb_in  = Default( lsb_in  ,false)
