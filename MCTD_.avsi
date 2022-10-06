@@ -359,6 +359,8 @@
 ### CHANGELOG:
 ### ----------
 ###
+### mt_lutxy syntax fixed when AA used.
+###
 ### Fixed sharpening internal masks. (high bit depth)
 ###
 ### Fixed the high bit depth processing
@@ -1330,7 +1332,7 @@ smP = (post==0)        ? smP
    aaD1    = (AA==true&&reduc!=-1) ? mt_makediff(smB, smA, U=1, V=1) : NOP()
    aaD1MVS = (AA==true&&reduc!=-1) ? aaD1.MSuper(hpad=0,vpad=0,pel=pel,sharp=MVsharp,levels=1,chroma=false) : NOP()
    aaD2    = (AA==true&&reduc!=-1) ? aaD1.MDegrain1(aaD1MVS, b1v, f1v, thSAD=thSAD, thSCD1=thSCD1, thSCD2=thSCD2, plane=0) : NOP()
-   aaD2    = (AA==true&&reduc!=-1) ? mt_lutxy(aaD1, aaD2, "x range_half - abs y range_half - abs < x y ?", U=1, V=1).mergeluma(aaD2, 1.0-reduc,use_expr=1) : NOP()
+   aaD2    = (AA==true&&reduc!=-1) ? mt_lutxy(aaD1, aaD2, "x range_half - abs y range_half - abs < x y ?", U=1, V=1, use_expr=1).mergeluma(aaD2, 1.0-reduc) : NOP()
 
    smA     = (AA==false) ? smB
    \       : (reduc==-1) ? smA
