@@ -2,11 +2,11 @@
 ###                                                                                                                     ###
 ###                                     Motion-Compensated Temporal Denoise: MCTD()                                     ###
 ###                                                                                                                     ###
-###                                      v1.4.20 by "LaTo INV.", mod4.3 by 06_taro                                      ###
-
+###                                      v1.4.20 by "LaTo INV.", mod4.3 by 06_taro, mod4.4                              ###
 ###                                                                                                                     ###
-###                                                    09 Feb 2013                                                      ###
-
+###                                                                                                                     ###
+###                                                    15 Oct 2022                                                      ###
+###                                                                                                                     ###
 ###                                                                                                                     ###
 ###########################################################################################################################
 ###
@@ -49,7 +49,7 @@
 ### | radius     : Temporal radius [1...6]                                                                |
 ### | sigma      : FFT3D sigma for the pre-filtering clip [0=no pre-filtering,1...]                       |
 ### | twopass    : Do the denoising job in 2 stages (stronger but very slow)                              |
-### | useTTmpSm  : Use MDegrain (faster) or MCompensate+vsTTempsmooth (stronger)                            |
+### | useTTmpSm  : Use MDegrain (faster) or MCompensate+vsTTempsmooth (stronger)                          |
 ### | limit      : Limit the effect of the first denoising [-2=luma-adaptive-auto,-1=auto,0=off,1...255]  |
 ### | limitC     : Limit the effect of the first denoising on chroma planes                    +--same--+ |
 ### | limit2     : Limit the effect of the second denoising (if twopass=true)                  |   as   | |
@@ -179,7 +179,6 @@
 ### | fixband : Prevent banding issue with FFT3D    |
 ### +---------------------------------------+-------+
 ### | bt        : FFT3D block temporal size |
-### | ncpu      : FFT3Dfilter ncpu          |
 ### | precision : FFT3Dgpu precision        |
 ### +---------------------------------------+
 ###
@@ -206,6 +205,7 @@
 ### +--------+
 ### | GLOBAL |
 ### +--------+--------------------------------------------------------------------------------------+
+### | ncpu     : Used threads [<0-threads for internal multithreading,>0-FFT3Dfilter ncpu]          |
 ### | p        : Set an external prefilter clip                                                     |
 ### | settings : Global MCTD settings [default="low"]                                               |
 ### |             - "very low"                                                                      |
@@ -214,7 +214,7 @@
 ### |             - "high"                                                                          |
 ### |             - "very high"                                                                     |
 ### | useMMask : Enable motion mask for sharp/stabilize/enhance along with edge mask [default=true] |
-### | pp       : Enable MCTDmod_PP for post-processing [default=true]                                  |
+### | pp       : Enable MCTDmod_PP for post-processing [default=true]                               |
 ### +-----------------------------------------------------------------------------------------------+
 ###
 ###
@@ -356,8 +356,22 @@
 ###
 ###
 ###
+### MCTD's Internal multithreading :
+### ------------------------------------
+###
+### It requires significant amount of RAM.
+### Always use SetMemoryMax(...) at the beginning of the script.
+###
+### Do not use prefetch() after MCTD.
+###
+### Always start from ncpu=-2 and decrease by 2 (-4,-6,-8...) until find the optimal value.
+###
+###
+###
 ### CHANGELOG:
 ### ----------
+###
+### v1.4.20 mod4.4: Implemented internal multithreading.
 ###
 ### mt_lutxy syntax fixed when AA used.
 ###
@@ -571,8 +585,9 @@ function MCTD( clip i, int "radius", float "sigma", bool "twopass", bool "useTTm
 \              string "p1nr", string "p2nr", string "ppnr", bool "pp" )
 {
 ### VERSION
-version = "v1.4.20 mod3.8"
-#Assert(isYV12(i) == True ? true : false, chr(10) + "This is not an YV12 clip ! Please convert color space to YV12 before using MCTD()" + chr(10))
+version = "v1.4.20 mod4.4"
+Assert(IsYUV(i) == True ? true : false, chr(10) + "This is not an YUV clip ! Please convert color space to YUV before using MCTD()" + chr(10))
+Assert(ComponentSize(i) < 4 ? true : false, chr(10) + "Clip bit depth must be between 8..16-bit before using MCTD()" + chr(10))
 
 
 ### SETTINGS
@@ -801,6 +816,12 @@ Assert((method>=0&&method<=2)         ? true : false, chr(10) + "'method' have n
 Assert((ECrad>=1)                     ? true : false, chr(10) + "'ECrad' have not a correct value! [>=1]" + chr(10))
 Assert((ECthr>=0&&ECthr<=255)         ? true : false, chr(10) + "'ECthr' have not a correct value! [0,...,255]" + chr(10))
 Assert((pMode>=0&&pMode<=2)           ? true : false, chr(10) + "'pMode' have not a correct value! [0,1,2]" + chr(10))
+Assert((ncpu!=0)                      ? true : false, chr(10) + "'ncpu' have not a correct value! [!=0]" + chr(10))
+
+
+threads = (ncpu<0) ? Abs(ncpu) : 0
+frames = (ncpu>0) ? 0 : threads
+ncpu = (ncpu<0) ? 1 : ncpu
 
 
 ### INPUT
@@ -820,19 +841,18 @@ m4 = ((int(xi/4.0)*4==xi)&&(int(yi/4.0)*4==yi)) ? true : false
 Assert( m4 ? true : false, chr(10) + "This is not a MOD4 clip! Please use crop() or addborders() before using MCTD()" + chr(10))
 
 bits_8 = (ComponentSize(i) == 1)
-prefiltering_gradfun3 = bits_8 ? i.FFT3Dfilter(sigma=sigma*0.8,sigma2=sigma*0.6,sigma3=sigma*0.4,sigma4=sigma*0.2,bw=bwbh,bh=bwbh,ow=owoh,oh=owoh,plane=chroma?4:0,bt=bt,ncpu=ncpu).GradFun3(thr=0.31 + sigma * 0.05) : \
-i.FFT3Dfilter(sigma=sigma*0.8,sigma2=sigma*0.6,sigma3=sigma*0.4,sigma4=sigma*0.2,bw=bwbh,bh=bwbh,ow=owoh,oh=owoh,plane=chroma?4:0,bt=bt,ncpu=ncpu).ConvertBits(16).ConvertToStacked().GradFun3(thr=0.31 + sigma * 0.05, lsb=true, lsb_in=true).ConvertFromStacked().ConvertBits(BitsPerComponent(i))
 
 Assert( (!bits_8 && GPU == true) ? false : true, chr(10) + "The clip must be 8-bit in order to use GPU." + chr(10))
 
 ### PREFILTERING
 p = defined(p)                   ? p.pointresize(xn,yn,-xf/2,-yf/2,xn,yn)
 \ : (sigma==0)                   ? i
-\ : (sigma<0)                    ? i.dfttest(sstring="0.0:"+string(-sigma*4./3.)+" 0.2:"+string(-sigma*9./3.)+" 1.0:"+string(-sigma*15./3.),tbsize=(bt%2==0)?bt+1:bt,u=chroma,v=chroma,quiet=true,dither=fixband?round(-sigma/11.):0)
-\ : (GPU==false&&fixband==false) ? i.FFT3Dfilter(sigma=sigma*0.8,sigma2=sigma*0.6,sigma3=sigma*0.4,sigma4=sigma*0.2,bw=bwbh,bh=bwbh,ow=owoh,oh=owoh,plane=chroma?4:0,bt=bt,ncpu=ncpu)
+\ : (sigma<0)                    ? i.dfttest(sstring="0.0:"+string(-sigma*4./3.)+" 0.2:"+string(-sigma*9./3.)+" 1.0:"+string(-sigma*15./3.),tbsize=(bt%2==0)?bt+1:bt,u=chroma,v=chroma,quiet=true,dither=fixband?round(-sigma/11.):0,threads=(threads)>0?1:0).prefetch(threads,frames)
+\ : (GPU==false&&fixband==false) ? i.FFT3Dfilter(sigma=sigma*0.8,sigma2=sigma*0.6,sigma3=sigma*0.4,sigma4=sigma*0.2,bw=bwbh,bh=bwbh,ow=owoh,oh=owoh,plane=chroma?4:0,bt=bt,ncpu=ncpu).prefetch(threads,frames)
 \ : (GPU==true &&fixband==false) ? i.FFT3Dgpu(sigma=sigma*0.8,sigma2=sigma*0.6,sigma3=sigma*0.4,sigma4=sigma*0.2,bw=bwbh,bh=bwbh,ow=owoh,oh=owoh,plane=chroma?4:0,bt=bt,precision=precision)
-\ : (GPU==false&&fixband==true ) ? prefiltering_gradfun3
-\ :                                i.FFT3Dgpu(sigma=sigma*0.8,sigma2=sigma*0.6,sigma3=sigma*0.4,sigma4=sigma*0.2,bw=bwbh,bh=bwbh,ow=owoh,oh=owoh,plane=chroma?4:0,bt=bt,precision=precision).GradFun3(thr=0.31 + sigma * 0.05)
+\ : (GPU==false&&fixband==true ) ? (bits_8) ? i.FFT3Dfilter(sigma=sigma*0.8,sigma2=sigma*0.6,sigma3=sigma*0.4,sigma4=sigma*0.2,bw=bwbh,bh=bwbh,ow=owoh,oh=owoh,plane=chroma?4:0,bt=bt,ncpu=ncpu).prefetch(threads,frames).GradFun3(thr=0.31 + sigma * 0.05).prefetch(threads,frames)
+\ :                                i.FFT3Dfilter(sigma=sigma*0.8,sigma2=sigma*0.6,sigma3=sigma*0.4,sigma4=sigma*0.2,bw=bwbh,bh=bwbh,ow=owoh,oh=owoh,plane=chroma?4:0,bt=bt,ncpu=ncpu).prefetch(threads,frames).ConvertBits(16).ConvertToStacked().GradFun3(thr=0.31 + sigma * 0.05, lsb=true, lsb_in=true).prefetch(threads,frames).ConvertFromStacked().ConvertBits(BitsPerComponent(i))
+\ :                                i.FFT3Dgpu(sigma=sigma*0.8,sigma2=sigma*0.6,sigma3=sigma*0.4,sigma4=sigma*0.2,bw=bwbh,bh=bwbh,ow=owoh,oh=owoh,plane=chroma?4:0,bt=bt,precision=precision).GradFun3(thr=0.31 + sigma * 0.05).prefetch(threads,frames)
 
 
 ### DEBLOCKING
@@ -840,9 +860,9 @@ padX = xi%8 == 0 ? 0 : (8 - xi%8)
 padY = yi%8 == 0 ? 0 : (8 - yi%8)
 
 d  = (deblock==false) ? i
-\  : (useQED==true)   ? idb.deblock_QED(quant1=quant1,quant2=quant2,uv=chroma?3:2).pointresize(xn,yn,-xf/2,-yf/2,xn,yn)
-\  : ( padX==0 && padY==0 ) ? idb.deblock(quant=int(quant1*0.5+quant2*0.5)).pointresize(xn,yn,-xf/2,-yf/2,xn,yn)
-\  : idb.pointresize(xi+padX, yi+padY, 0, 0, xi+padX, xi+padY).deblock(quant=int(quant1*0.5+quant2*0.5)).pointresize(xn,yn,-xf/2,-yf/2,xn-padX,yn-padX)
+\  : (useQED==true)   ? idb.deblock_QED(quant1=quant1,quant2=quant2,uv=chroma?3:2).prefetch(threads,frames).pointresize(xn,yn,-xf/2,-yf/2,xn,yn)
+\  : ( padX==0 && padY==0 ) ? idb.deblock(quant=int(quant1*0.5+quant2*0.5)).prefetch(threads,frames).pointresize(xn,yn,-xf/2,-yf/2,xn,yn)
+\  : idb.pointresize(xi+padX, yi+padY, 0, 0, xi+padX, xi+padY).deblock(quant=int(quant1*0.5+quant2*0.5)).prefetch(threads,frames).pointresize(xn,yn,-xf/2,-yf/2,xn-padX,yn-padX)
 
 ### PREPARING
 nullclip = Blankclip()
@@ -890,33 +910,33 @@ b6v = (radius<6) ? nullclip
 \   :              pMVS.MAnalyse(isb=true, delta=6, truemotion=truemotion, blksize=blksize, overlap=overlap, pelsearch=pelsearch, search=search, searchparam=searchparam, DCT=DCT, global=MVglobal, chroma=chroma)
 
 f1v = !refine || (radius<1) ? f1v
-\   :                         rMVS.MRecalculate(f1v, truemotion=truemotion, blksize=rfn_blksize, overlap=rfn_overlap, search=search, searchparam=searchparam, DCT=DCT, thSAD=rfn_thSAD, chroma=chroma)
+\   :                         rMVS.MRecalculate(f1v, truemotion=truemotion, blksize=rfn_blksize, overlap=rfn_overlap, search=search, searchparam=searchparam, DCT=DCT, thSAD=rfn_thSAD, chroma=chroma).prefetch(threads,frames)
 f2v = !refine || (radius<2) ? f2v
-\   :                         rMVS.MRecalculate(f2v, truemotion=truemotion, blksize=rfn_blksize, overlap=rfn_overlap, search=search, searchparam=searchparam, DCT=DCT, thSAD=rfn_thSAD, chroma=chroma)
+\   :                         rMVS.MRecalculate(f2v, truemotion=truemotion, blksize=rfn_blksize, overlap=rfn_overlap, search=search, searchparam=searchparam, DCT=DCT, thSAD=rfn_thSAD, chroma=chroma).prefetch(threads,frames)
 f3v = !refine || (radius<3) ? f3v
-\   :                         rMVS.MRecalculate(f3v, truemotion=truemotion, blksize=rfn_blksize, overlap=rfn_overlap, search=search, searchparam=searchparam, DCT=DCT, thSAD=rfn_thSAD, chroma=chroma)
+\   :                         rMVS.MRecalculate(f3v, truemotion=truemotion, blksize=rfn_blksize, overlap=rfn_overlap, search=search, searchparam=searchparam, DCT=DCT, thSAD=rfn_thSAD, chroma=chroma).prefetch(threads,frames)
 f4v = !refine || (radius<4) ? f4v
-\   :                         rMVS.MRecalculate(f4v, truemotion=truemotion, blksize=rfn_blksize, overlap=rfn_overlap, search=search, searchparam=searchparam, DCT=DCT, thSAD=rfn_thSAD, chroma=chroma)
+\   :                         rMVS.MRecalculate(f4v, truemotion=truemotion, blksize=rfn_blksize, overlap=rfn_overlap, search=search, searchparam=searchparam, DCT=DCT, thSAD=rfn_thSAD, chroma=chroma).prefetch(threads,frames)
 f5v = !refine || (radius<5) ? f5v
-\   :                         rMVS.MRecalculate(f5v, truemotion=truemotion, blksize=rfn_blksize, overlap=rfn_overlap, search=search, searchparam=searchparam, DCT=DCT, thSAD=rfn_thSAD, chroma=chroma)
+\   :                         rMVS.MRecalculate(f5v, truemotion=truemotion, blksize=rfn_blksize, overlap=rfn_overlap, search=search, searchparam=searchparam, DCT=DCT, thSAD=rfn_thSAD, chroma=chroma).prefetch(threads,frames)
 f6v = !refine || (radius<6) ? f6v
-\   :                         rMVS.MRecalculate(f6v, truemotion=truemotion, blksize=rfn_blksize, overlap=rfn_overlap, search=search, searchparam=searchparam, DCT=DCT, thSAD=rfn_thSAD, chroma=chroma)
+\   :                         rMVS.MRecalculate(f6v, truemotion=truemotion, blksize=rfn_blksize, overlap=rfn_overlap, search=search, searchparam=searchparam, DCT=DCT, thSAD=rfn_thSAD, chroma=chroma).prefetch(threads,frames)
 b1v = !refine || (radius<1) ? b1v
-\   :                         rMVS.MRecalculate(b1v, truemotion=truemotion, blksize=rfn_blksize, overlap=rfn_overlap, search=search, searchparam=searchparam, DCT=DCT, thSAD=rfn_thSAD, chroma=chroma)
+\   :                         rMVS.MRecalculate(b1v, truemotion=truemotion, blksize=rfn_blksize, overlap=rfn_overlap, search=search, searchparam=searchparam, DCT=DCT, thSAD=rfn_thSAD, chroma=chroma).prefetch(threads,frames)
 b2v = !refine || (radius<2) ? b2v
-\   :                         rMVS.MRecalculate(b2v, truemotion=truemotion, blksize=rfn_blksize, overlap=rfn_overlap, search=search, searchparam=searchparam, DCT=DCT, thSAD=rfn_thSAD, chroma=chroma)
+\   :                         rMVS.MRecalculate(b2v, truemotion=truemotion, blksize=rfn_blksize, overlap=rfn_overlap, search=search, searchparam=searchparam, DCT=DCT, thSAD=rfn_thSAD, chroma=chroma).prefetch(threads,frames)
 b3v = !refine || (radius<3) ? b3v
-\   :                         rMVS.MRecalculate(b3v, truemotion=truemotion, blksize=rfn_blksize, overlap=rfn_overlap, search=search, searchparam=searchparam, DCT=DCT, thSAD=rfn_thSAD, chroma=chroma)
+\   :                         rMVS.MRecalculate(b3v, truemotion=truemotion, blksize=rfn_blksize, overlap=rfn_overlap, search=search, searchparam=searchparam, DCT=DCT, thSAD=rfn_thSAD, chroma=chroma).prefetch(threads,frames)
 b4v = !refine || (radius<4) ? b4v
-\   :                         rMVS.MRecalculate(b4v, truemotion=truemotion, blksize=rfn_blksize, overlap=rfn_overlap, search=search, searchparam=searchparam, DCT=DCT, thSAD=rfn_thSAD, chroma=chroma)
+\   :                         rMVS.MRecalculate(b4v, truemotion=truemotion, blksize=rfn_blksize, overlap=rfn_overlap, search=search, searchparam=searchparam, DCT=DCT, thSAD=rfn_thSAD, chroma=chroma).prefetch(threads,frames)
 b5v = !refine || (radius<5) ? b5v
-\   :                         rMVS.MRecalculate(b5v, truemotion=truemotion, blksize=rfn_blksize, overlap=rfn_overlap, search=search, searchparam=searchparam, DCT=DCT, thSAD=rfn_thSAD, chroma=chroma)
+\   :                         rMVS.MRecalculate(b5v, truemotion=truemotion, blksize=rfn_blksize, overlap=rfn_overlap, search=search, searchparam=searchparam, DCT=DCT, thSAD=rfn_thSAD, chroma=chroma).prefetch(threads,frames)
 b6v = !refine || (radius<6) ? b6v
-\   :                         rMVS.MRecalculate(b6v, truemotion=truemotion, blksize=rfn_blksize, overlap=rfn_overlap, search=search, searchparam=searchparam, DCT=DCT, thSAD=rfn_thSAD, chroma=chroma)
+\   :                         rMVS.MRecalculate(b6v, truemotion=truemotion, blksize=rfn_blksize, overlap=rfn_overlap, search=search, searchparam=searchparam, DCT=DCT, thSAD=rfn_thSAD, chroma=chroma).prefetch(threads,frames)
 
    function MCTDmod_CTM(clip "i", clip "iMVS", clip "SAD_f1m", clip "SAD_b1m", clip "f1c", clip "b1c",
    \                 clip "f1v", clip "f2v", clip "f3v", clip "f4v", clip "f5v", clip "f6v", clip "b1v", clip "b2v", clip "b3v", clip "b4v", clip "b5v", clip "b6v",
-   \                 int "radius", bool "chroma", int "thSAD", int "thSCD1", int "thSCD2", string "cnr")
+   \                 int "radius", bool "chroma", int "thSAD", int "thSCD1", int "thSCD2", string "cnr", int "threads", int "frames")
    {
    nullclip = BlankClip()
 
@@ -932,31 +952,31 @@ b6v = !refine || (radius<6) ? b6v
    SAD_b6m = (radius>=6) ? i.MMask(b6v, kind=1, ml=thSAD, gamma=0.999, Ysc=255) : nullclip
 
    b     = BlankClip(i,color_yuv=$008080)
-   SAD_m = (radius==6) ? interleave(SAD_f6m, SAD_f5m, SAD_f4m, SAD_f3m, SAD_f2m, SAD_f1m, b, SAD_b1m, SAD_b2m, SAD_b3m, SAD_b4m, SAD_b5m, SAD_b6m)
-   \     : (radius==5) ? interleave(         SAD_f5m, SAD_f4m, SAD_f3m, SAD_f2m, SAD_f1m, b, SAD_b1m, SAD_b2m, SAD_b3m, SAD_b4m, SAD_b5m         )
-   \     : (radius==4) ? interleave(                  SAD_f4m, SAD_f3m, SAD_f2m, SAD_f1m, b, SAD_b1m, SAD_b2m, SAD_b3m, SAD_b4m                  )
-   \     : (radius==3) ? interleave(                           SAD_f3m, SAD_f2m, SAD_f1m, b, SAD_b1m, SAD_b2m, SAD_b3m                           )
-   \     : (radius==2) ? interleave(                                    SAD_f2m, SAD_f1m, b, SAD_b1m, SAD_b2m                                    )
-   \     : (radius==1) ? interleave(                                             SAD_f1m, b, SAD_b1m                                             )
+   SAD_m = (radius==6) ? interleave(SAD_f6m, SAD_f5m, SAD_f4m, SAD_f3m, SAD_f2m, SAD_f1m, b, SAD_b1m, SAD_b2m, SAD_b3m, SAD_b4m, SAD_b5m, SAD_b6m).prefetch(threads,frames)
+   \     : (radius==5) ? interleave(         SAD_f5m, SAD_f4m, SAD_f3m, SAD_f2m, SAD_f1m, b, SAD_b1m, SAD_b2m, SAD_b3m, SAD_b4m, SAD_b5m         ).prefetch(threads,frames)
+   \     : (radius==4) ? interleave(                  SAD_f4m, SAD_f3m, SAD_f2m, SAD_f1m, b, SAD_b1m, SAD_b2m, SAD_b3m, SAD_b4m                  ).prefetch(threads,frames)
+   \     : (radius==3) ? interleave(                           SAD_f3m, SAD_f2m, SAD_f1m, b, SAD_b1m, SAD_b2m, SAD_b3m                           ).prefetch(threads,frames)
+   \     : (radius==2) ? interleave(                                    SAD_f2m, SAD_f1m, b, SAD_b1m, SAD_b2m                                    ).prefetch(threads,frames)
+   \     : (radius==1) ? interleave(                                             SAD_f1m, b, SAD_b1m                                             ).prefetch(threads,frames)
    \     : nullclip
 
-   b2c = (radius>=2)  ? i.MCompensate(iMVS, b2v, thSAD=thSAD, thSCD1=thSCD1, thSCD2=thSCD2) : nullclip
-   b3c = (radius>=3)  ? i.MCompensate(iMVS, b3v, thSAD=thSAD, thSCD1=thSCD1, thSCD2=thSCD2) : nullclip
-   b4c = (radius>=4)  ? i.MCompensate(iMVS, b4v, thSAD=thSAD, thSCD1=thSCD1, thSCD2=thSCD2) : nullclip
-   b5c = (radius>=5)  ? i.MCompensate(iMVS, b5v, thSAD=thSAD, thSCD1=thSCD1, thSCD2=thSCD2) : nullclip
-   b6c = (radius>=6)  ? i.MCompensate(iMVS, b6v, thSAD=thSAD, thSCD1=thSCD1, thSCD2=thSCD2) : nullclip
-   f2c = (radius>=2)  ? i.MCompensate(iMVS, f2v, thSAD=thSAD, thSCD1=thSCD1, thSCD2=thSCD2) : nullclip
-   f3c = (radius>=3)  ? i.MCompensate(iMVS, f3v, thSAD=thSAD, thSCD1=thSCD1, thSCD2=thSCD2) : nullclip
-   f4c = (radius>=4)  ? i.MCompensate(iMVS, f4v, thSAD=thSAD, thSCD1=thSCD1, thSCD2=thSCD2) : nullclip
-   f5c = (radius>=5)  ? i.MCompensate(iMVS, f5v, thSAD=thSAD, thSCD1=thSCD1, thSCD2=thSCD2) : nullclip
-   f6c = (radius>=6)  ? i.MCompensate(iMVS, f6v, thSAD=thSAD, thSCD1=thSCD1, thSCD2=thSCD2) : nullclip
+   b2c = (radius>=2)  ? i.MCompensate(iMVS, b2v, thSAD=thSAD, thSCD1=thSCD1, thSCD2=thSCD2).prefetch(threads,frames) : nullclip
+   b3c = (radius>=3)  ? i.MCompensate(iMVS, b3v, thSAD=thSAD, thSCD1=thSCD1, thSCD2=thSCD2).prefetch(threads,frames) : nullclip
+   b4c = (radius>=4)  ? i.MCompensate(iMVS, b4v, thSAD=thSAD, thSCD1=thSCD1, thSCD2=thSCD2).prefetch(threads,frames) : nullclip
+   b5c = (radius>=5)  ? i.MCompensate(iMVS, b5v, thSAD=thSAD, thSCD1=thSCD1, thSCD2=thSCD2).prefetch(threads,frames) : nullclip
+   b6c = (radius>=6)  ? i.MCompensate(iMVS, b6v, thSAD=thSAD, thSCD1=thSCD1, thSCD2=thSCD2).prefetch(threads,frames) : nullclip
+   f2c = (radius>=2)  ? i.MCompensate(iMVS, f2v, thSAD=thSAD, thSCD1=thSCD1, thSCD2=thSCD2).prefetch(threads,frames) : nullclip
+   f3c = (radius>=3)  ? i.MCompensate(iMVS, f3v, thSAD=thSAD, thSCD1=thSCD1, thSCD2=thSCD2).prefetch(threads,frames) : nullclip
+   f4c = (radius>=4)  ? i.MCompensate(iMVS, f4v, thSAD=thSAD, thSCD1=thSCD1, thSCD2=thSCD2).prefetch(threads,frames) : nullclip
+   f5c = (radius>=5)  ? i.MCompensate(iMVS, f5v, thSAD=thSAD, thSCD1=thSCD1, thSCD2=thSCD2).prefetch(threads,frames) : nullclip
+   f6c = (radius>=6)  ? i.MCompensate(iMVS, f6v, thSAD=thSAD, thSCD1=thSCD1, thSCD2=thSCD2).prefetch(threads,frames) : nullclip
 
-   c = (radius==6) ? interleave(f6c, f5c, f4c, f3c, f2c, f1c, i, b1c, b2c, b3c, b4c, b5c, b6c)
-   \ : (radius==5) ? interleave(     f5c, f4c, f3c, f2c, f1c, i, b1c, b2c, b3c, b4c, b5c     )
-   \ : (radius==4) ? interleave(          f4c, f3c, f2c, f1c, i, b1c, b2c, b3c, b4c          )
-   \ : (radius==3) ? interleave(               f3c, f2c, f1c, i, b1c, b2c, b3c               )
-   \ : (radius==2) ? interleave(                    f2c, f1c, i, b1c, b2c                    )
-   \ : (radius==1) ? interleave(                         f1c, i, b1c                         )
+   c = (radius==6) ? interleave(f6c, f5c, f4c, f3c, f2c, f1c, i, b1c, b2c, b3c, b4c, b5c, b6c).prefetch(threads,frames)
+   \ : (radius==5) ? interleave(     f5c, f4c, f3c, f2c, f1c, i, b1c, b2c, b3c, b4c, b5c     ).prefetch(threads,frames)
+   \ : (radius==4) ? interleave(          f4c, f3c, f2c, f1c, i, b1c, b2c, b3c, b4c          ).prefetch(threads,frames)
+   \ : (radius==3) ? interleave(               f3c, f2c, f1c, i, b1c, b2c, b3c               ).prefetch(threads,frames)
+   \ : (radius==2) ? interleave(                    f2c, f1c, i, b1c, b2c                    ).prefetch(threads,frames)
+   \ : (radius==1) ? interleave(                         f1c, i, b1c                         ).prefetch(threads,frames)
    \ : nullclip
 
    sm = Defined(cnr) ? Eval("c."+cnr)
@@ -1004,7 +1024,7 @@ b6v = !refine || (radius<6) ? b6v
    return sm
    }
 
-dMVS    = d.MSuper(hpad=0,vpad=0,pel=pel,sharp=MVsharp,levels=1,chroma=chroma)
+dMVS    = d.MSuper(hpad=0,vpad=0,pel=pel,sharp=MVsharp,levels=1,chroma=chroma).prefetch(threads,frames)
 SAD_f1m = d.MMask(f1v, kind=1, ml=thSAD, gamma=0.999, Ysc=255)
 SAD_b1m = d.MMask(b1v, kind=1, ml=thSAD, gamma=0.999, Ysc=255)
 f1c     = d.MCompensate(dMVS, f1v, thSAD=thSAD, thSCD1=thSCD1, thSCD2=thSCD2)
@@ -1014,13 +1034,13 @@ b1c     = d.MCompensate(dMVS, b1v, thSAD=thSAD, thSCD1=thSCD1, thSCD2=thSCD2)
 ### DENOISING: FIRST PASS
 sm = ( Defined(p1nr) ) ? MCTDmod_CTM(i=d, iMVS=dMVS, SAD_f1m=SAD_f1m, SAD_b1m=SAD_b1m, f1c=f1c, b1c=b1c,
 \                                 f1v=f1v, f2v=f2v, f3v=f3v, f4v=f4v, f5v=f5v, f6v=f6v, b1v=b1v, b2v=b2v, b3v=b3v, b4v=b4v, b5v=b5v, b6v=b6v,
-\                                 radius=radius, chroma=chroma, thSAD=thSAD, thSCD1=thSCD1, thSCD2=thSCD2, cnr=p1nr)
+\                                 radius=radius, chroma=chroma, thSAD=thSAD, thSCD1=thSCD1, thSCD2=thSCD2, cnr=p1nr, threads=threads, frames=frames).prefetch(threads,frames)
 \  : (useTTmpSm==true) ? MCTDmod_CTM(i=d, iMVS=dMVS, SAD_f1m=SAD_f1m, SAD_b1m=SAD_b1m, f1c=f1c, b1c=b1c,
 \                                 f1v=f1v, f2v=f2v, f3v=f3v, f4v=f4v, f5v=f5v, f6v=f6v, b1v=b1v, b2v=b2v, b3v=b3v, b4v=b4v, b5v=b5v, b6v=b6v,
-\                                 radius=radius, chroma=chroma, thSAD=thSAD, thSCD1=thSCD1, thSCD2=thSCD2)
+\                                 radius=radius, chroma=chroma, thSAD=thSAD, thSCD1=thSCD1, thSCD2=thSCD2, threads=threads, frames=frames).prefetch(threads,frames)
 \  :                     MCTDmod_MVD(i=d, iMVS=dMVS,
 \                                 f1v=f1v, f2v=f2v, f3v=f3v, f4v=f4v, f5v=f5v, f6v=f6v, b1v=b1v, b2v=b2v, b3v=b3v, b4v=b4v, b5v=b5v, b6v=b6v,
-\                                 radius=radius, chroma=chroma, thSAD=thSAD, thSCD1=thSCD1, thSCD2=thSCD2)
+\                                 radius=radius, chroma=chroma, thSAD=thSAD, thSCD1=thSCD1, thSCD2=thSCD2).prefetch(threads,frames)
 
 ### LIMIT: FIRST PASS
 /*
@@ -1106,13 +1126,13 @@ b1c     = !twopass ? b1c     : smL.MCompensate(smLMVS, b1v, thSAD=thSAD, thSCD1=
 sm = (twopass==false)  ? sm
 \  : ( Defined(p2nr) ) ? MCTDmod_CTM(i=smL, iMVS=smLMVS, SAD_f1m=SAD_f1m, SAD_b1m=SAD_b1m, f1c=f1c, b1c=b1c,
 \                                 f1v=f1v, f2v=f2v, f3v=f3v, f4v=f4v, f5v=f5v, f6v=f6v, b1v=b1v, b2v=b2v, b3v=b3v, b4v=b4v, b5v=b5v, b6v=b6v,
-\                                 radius=radius, chroma=chroma, thSAD=thSAD, thSCD1=thSCD1, thSCD2=thSCD2, cnr=p2nr)
+\                                 radius=radius, chroma=chroma, thSAD=thSAD, thSCD1=thSCD1, thSCD2=thSCD2, cnr=p2nr, threads=threads, frames=frames)
 \  : (useTTmpSm==true) ? MCTDmod_CTM(i=smL, iMVS=smLMVS, SAD_f1m=SAD_f1m, SAD_b1m=SAD_b1m, f1c=f1c, b1c=b1c,
 \                                 f1v=f1v, f2v=f2v, f3v=f3v, f4v=f4v, f5v=f5v, f6v=f6v, b1v=b1v, b2v=b2v, b3v=b3v, b4v=b4v, b5v=b5v, b6v=b6v,
-\                                 radius=radius, chroma=chroma, thSAD=thSAD, thSCD1=thSCD1, thSCD2=thSCD2)
+\                                 radius=radius, chroma=chroma, thSAD=thSAD, thSCD1=thSCD1, thSCD2=thSCD2, threads=threads, frames=frames)
 \  :                     MCTDmod_MVD(i=smL, iMVS=smLMVS,
 \                                 f1v=f1v, f2v=f2v, f3v=f3v, f4v=f4v, f5v=f5v, f6v=f6v, b1v=b1v, b2v=b2v, b3v=b3v, b4v=b4v, b5v=b5v, b6v=b6v,
-\                                 radius=radius, chroma=chroma, thSAD=thSAD, thSCD1=thSCD1, thSCD2=thSCD2)
+\                                 radius=radius, chroma=chroma, thSAD=thSAD, thSCD1=thSCD1, thSCD2=thSCD2).prefetch(threads,frames)
 
 l_lmr31 = limit2 == 0 ? 1 : 3
 lchr    = chroma && limitC2 != 0
@@ -1145,16 +1165,13 @@ smL  = !twopass               ? smL                          :
 post_abs = Abs(post)
 smP = (post==0)    ? smL
 \   : Defined(ppnr)? Eval("smL."+ppnr)
-\   : (GPU==false) ? smL.FFT3Dfilter(sigma=post_abs*0.8,sigma2=post_abs*0.6,sigma3=post_abs*0.4,sigma4=post_abs*0.2,bw=bwbh,bh=bwbh,ow=owoh,oh=owoh,plane=chroma?4:0,bt=bt,ncpu=ncpu)
+\   : (GPU==false) ? smL.FFT3Dfilter(sigma=post_abs*0.8,sigma2=post_abs*0.6,sigma3=post_abs*0.4,sigma4=post_abs*0.2,bw=bwbh,bh=bwbh,ow=owoh,oh=owoh,plane=chroma?4:0,bt=bt,ncpu=ncpu).prefetch(threads,frames)
 \   :                smL.FFT3Dgpu(sigma=post_abs*0.8,sigma2=post_abs*0.6,sigma3=post_abs*0.4,sigma4=post_abs*0.2,bw=bwbh,bh=bwbh,ow=owoh,oh=owoh,plane=chroma?4:0,bt=bt,precision=precision)
-
-post_denoising_gradfun3 = (bits_8) ? mt_makediff(smL,mt_makediff(smL,smP,U=chr31,V=chr31).GradFun3(thr=0.31 + post * 0.5),U=chr31,V=chr31) : \
-mt_makediff(smL,mt_makediff(smL,smP,U=chr31,V=chr31).ConvertBits(16).ConvertToStacked().GradFun3(thr=0.31 + post * 0.5, lsb=true, lsb_in=true).ConvertFromStacked().ConvertBits(BitsPerComponent(smL)),U=chr31,V=chr31)
 
 smP = (post==0)        ? smP
 \   : ( fixband==false || post<0 ) ? smP
-\   :                                post_denoising_gradfun3
-
+\   :                                (bits_8) ? mt_makediff(smL,mt_makediff(smL,smP,U=chr31,V=chr31).GradFun3(thr=0.31 + post * 0.5),U=chr31,V=chr31)
+\   :                                mt_makediff(smL,mt_makediff(smL,smP,U=chr31,V=chr31).ConvertBits(16).ConvertToStacked().GradFun3(thr=0.31 + post * 0.5, lsb=true, lsb_in=true).ConvertFromStacked().ConvertBits(BitsPerComponent(smL)),U=chr31,V=chr31)
 
 
 ### POST-PROCESSING
@@ -1167,7 +1184,7 @@ smP = (post==0)        ? smP
    \                 bool "stabilize", int "maxr", int "lthresh", int "cthresh", int "TTstr", string "stF",
    \                 bool "enhance", float "GFthr", float "AGstr", int "bias", int "temp", string "dbF",
    \                 bool "chroma", string "settings", bool "useMMask",
-   \                 clip "f1v", clip "b1v", clip "f1c", clip "b1c", bool "internal" )
+   \                 clip "f1v", clip "b1v", clip "f1c", clip "b1c", bool "internal", int "threads", int "frames" )
    {
    ### SETTINGS
    settings     = Default(settings, "low")
@@ -1246,7 +1263,8 @@ smP = (post==0)        ? smP
 
 
    ### WARNING
-   #Assert(isYV12(denoised) == True ? true : false, chr(10) + "This is not an YV12 clip ! Please convert color space to YV12 before using MCTDmod_PP()" + chr(10))
+   Assert(IsYUV(denoised) == True ? true : false, chr(10) + "This is not an YUV clip ! Please convert color space to YUV before using MCTDmod_PP()" + chr(10))
+   Assert(ComponentSize(denoised) < 4 ? true : false, chr(10) + "Clip bit depth must be between 8..16-bit before using MCTDmod_PP()" + chr(10))
 
    w = denoised.width()
    h = denoised.height()
@@ -1311,22 +1329,22 @@ smP = (post==0)        ? smP
 
    ### PROTECTING
    rg17 = (protect==true) ? smP.removegrain(17,-1) : NOP()
-   iOB  = (protect==true) ? i.mt_lut("x "+string(cutoff)+" scalef >= x 0 ?",U=1,V=1) : NOP()
-   mB   = (protect==true) ? mt_makediff(iOB,rg17,U=1,V=1).mt_binarize(128+threshold,upper=false,U=1,V=1).removegrain(5,-1) : NOP()
-   lB   = (protect==true) ? mt_lutxy(smP,i,"x y - abs "+string(maxdiff)+" scalef <= x x y - 0 < y "+string(maxdiff)+" scalef - x ? ?",U=1,V=1,use_expr=1) : NOP()
-   smB  = (protect==true) ? mt_merge(smP,lB,mB,U=chr21,V=chr21) : smP
+   iOB  = (protect==true) ? i.mt_lut("x "+string(cutoff)+" scalef >= x 0 ?",U=1,V=1).prefetch(threads,frames) : NOP()
+   mB   = (protect==true) ? mt_makediff(iOB,rg17,U=1,V=1).mt_binarize(128+threshold,upper=false,U=1,V=1).removegrain(5,-1).prefetch(threads,frames) : NOP()
+   lB   = (protect==true) ? mt_lutxy(smP,i,"x y - abs "+string(maxdiff)+" scalef <= x x y - 0 < y "+string(maxdiff)+" scalef - x ? ?",U=1,V=1,use_expr=1).prefetch(threads,frames) : NOP()
+   smB  = (protect==true) ? mt_merge(smP,lB,mB,U=chr21,V=chr21).prefetch(threads,frames) : smP
 
 
    ### ANTI-ALIASING
    cAA = (AA==false)      ? nullclip
-   \   : (useEEDI2==true) ? smB.Turnleft().EEDI2(field=1,maxd=maxd).Turnright().EEDI2(field=1,maxd=maxd)
-   \   :                    smB.Pointresize(xn*2,yn*2).Turnleft().Sangnom2(order=1,aa=maxd).Turnright().Sangnom2(order=1,aa=maxd)
+   \   : (useEEDI2==true) ? smB.Turnleft().EEDI2(field=1,maxd=maxd).prefetch(threads,frames).Turnright().EEDI2(field=1,maxd=maxd).prefetch(threads,frames)
+   \   :                    smB.Pointresize(xn*2,yn*2).Turnleft().Sangnom2(order=1,aa=maxd).prefetch(threads,frames).Turnright().Sangnom2(order=1,aa=maxd).prefetch(threads,frames)
    cAA = (AA==false)      ? nullclip
    \   : (method==0)      ? cAA.Bilinearresize(xn,yn,0.5,-0.5,xn*2,yn*2)
    \   : (method==1)      ? cAA.Spline36resize(xn,yn,0.5,-0.5,xn*2,yn*2)
    \   :                    cAA.Lanczos4resize(xn,yn,0.5,-0.5,xn*2,yn*2)
    cAA = (aaF!="internal") ? Eval("smB."+aaF) : cAA
-   mA  = (AA==true) ? smB.mt_edge("prewitt",0,255,0,0,V=1,U=1).mt_lut("x "+string(AAthr)+" scalef <= 0 x 1.4 ^ ?",U=1,V=1).removegrain(4,-1).mt_inflate(U=1,V=1) : NOP()
+   mA  = (AA==true) ? smB.mt_edge("prewitt",0,255,0,0,V=1,U=1).prefetch(threads,frames).mt_lut("x "+string(AAthr)+" scalef <= 0 x 1.4 ^ ?",U=1,V=1).removegrain(4,-1).mt_inflate(U=1,V=1) : NOP()
    smA = (AA==true) ? mt_merge(smB,cAA,mA,luma=chroma?true:false,U=chr31,V=chr31) : NOP()
 
    aaD1    = (AA==true&&reduc!=-1) ? mt_makediff(smB, smA, U=1, V=1) : NOP()
@@ -1342,7 +1360,7 @@ smP = (post==0)        ? smP
    ### EDGECLEANING
    mP  = (edgeclean==true) ? mt_edge(smA,"prewitt",0,255,0,0,V=1,U=1) : NOP()
    mS  = (edgeclean==true) ? mP.mt_expand(mode=mt_square(radius=ECrad),U=1,V=1).mt_inflate(U=1,V=1) : NOP()
-   mD  = (edgeclean==true) ? mt_lutxy(mS,mP.mt_inflate(U=1,V=1),"x y - "+string(ECthr)+" scalef <= 0 x y - ?",U=1,V=1,use_expr=1).mt_inflate(U=1,V=1).removegrain(20,-1) : NOP()
+   mD  = (edgeclean==true) ? mt_lutxy(mS,mP.mt_inflate(U=1,V=1),"x y - "+string(ECthr)+" scalef <= 0 x y - ?",U=1,V=1,use_expr=1).prefetch(threads,frames).mt_inflate(U=1,V=1).removegrain(20,-1) : NOP()
    smE = (edgeclean==true) ? mt_merge(smA,Eval("smA." + ECmode),mD,luma=chroma?true:false,U=chr31,V=chr31) : smA
 
 
@@ -1358,13 +1376,13 @@ smP = (post==0)        ? smP
 
    ### SHARPENING
    Sclp = (sharp == true) ? (shF!="internal") ? Eval("smE."+shF) :
-   \                        IsBool(ssource)   ? ssource ? smE.LSFmod(strength=strength,Smode=SHmode,Smethod=SHmethod,Lmode=0,overshoot=Sovershoot,preblur="ON",secure=true,edgemode=0,soft=0,soothe=false,ss_x=1.00,ss_y=1.00,source=i)
-   \                                                    : smE.LSFmod(strength=strength,Smode=SHmode,Smethod=SHmethod,Lmode=Slimit,overshoot=Sovershoot,preblur="ON",secure=true,edgemode=0,soft=0,soothe=false,ss_x=1.00,ss_y=1.00) :
-   \                        IsClip(ssource)   ? smE.LSFmod(strength=strength,Smode=SHmode,Smethod=SHmethod,Lmode=0,overshoot=Sovershoot,preblur="ON",secure=true,edgemode=0,soft=0,soothe=false,ss_x=1.00,ss_y=1.00,source=ssource) :
+   \                        IsBool(ssource)   ? ssource ? smE.LSFmod(strength=strength,Smode=SHmode,Smethod=SHmethod,Lmode=0,overshoot=Sovershoot,preblur="ON",secure=true,edgemode=0,soft=0,soothe=false,ss_x=1.00,ss_y=1.00,source=i).prefetch(threads,frames)
+   \                                                    : smE.LSFmod(strength=strength,Smode=SHmode,Smethod=SHmethod,Lmode=Slimit,overshoot=Sovershoot,preblur="ON",secure=true,edgemode=0,soft=0,soothe=false,ss_x=1.00,ss_y=1.00).prefetch(threads,frames) :
+   \                        IsClip(ssource)   ? smE.LSFmod(strength=strength,Smode=SHmode,Smethod=SHmethod,Lmode=0,overshoot=Sovershoot,preblur="ON",secure=true,edgemode=0,soft=0,soothe=false,ss_x=1.00,ss_y=1.00,source=ssource).prefetch(threads,frames) :
    \                        Assert(False, "MCTD: ssource should be bool or clip!")
    \                      : NOP()
-   Tmax = (sharp == true) ? i.mt_logic(f1c,"max",U=1,V=1).mt_logic(b1c,"max",U=1,V=1) : NOP()
-   Tmin = (sharp == true) ? i.mt_logic(f1c,"min",U=1,V=1).mt_logic(b1c,"min",U=1,V=1) : NOP()
+   Tmax = (sharp == true) ? i.mt_logic(f1c,"max",U=1,V=1).prefetch(threads,frames).mt_logic(b1c,"max",U=1,V=1).prefetch(threads,frames) : NOP()
+   Tmin = (sharp == true) ? i.mt_logic(f1c,"min",U=1,V=1).prefetch(threads,frames).mt_logic(b1c,"min",U=1,V=1).prefetch(threads,frames) : NOP()
 
    shrp = (sharp==false) ? smE
    \    : (Tlimit==true) ? Sclp.mt_clamp(Tmax, Tmin, Tovershoot, Tovershoot, U=1, V=1)
@@ -1378,7 +1396,7 @@ smP = (post==0)        ? smP
    \   :                     sL.vsTTempSmooth(maxr=maxr, ythresh=lthresh, uthresh=cthresh, vthresh=cthresh, ymdiff=lthresh, umdiff=cthresh, vmdiff=cthresh, strength=TTstr)
    \   :                     sL
    GFc = (enhance==true) ? (dbF!="internal") ? Eval("TTc."+dbF)
-   \   :                   TTc.GradFun3DBmod(thr=GFthr,thrC=chroma?GFthr:1.0,mode=0,str=AGstr,strC=0.0,temp=temp,adapt=bias,mask=false,show=false)
+   \   :                   TTc.GradFun3DBmod(thr=GFthr,thrC=chroma?GFthr:1.0,mode=0,str=AGstr,strC=0.0,temp=temp,adapt=bias,mask=false,show=false).prefetch(threads,frames)
    \   :                   TTc
    FSc = (enhance==true||stabilize==true) ? useMMask ? mt_merge(GFc,sL,mF,luma=chroma?true:false,U=chr31,V=chr31)
    \                                                 : mt_merge(GFc,sL,mR,luma=chroma?true:false,U=chr31,V=chr31)
@@ -1398,7 +1416,7 @@ PP = pp ? MCTDmod_PP( smP, i,
    \               stabilize, maxr, lthresh, cthresh, TTstr, stF,
    \               enhance, GFthr, AGstr, bias, temp, dbF,
    \               chroma, settings, useMMask,
-   \               f1v, b1v, f1c, b1c, true )
+   \               f1v, b1v, f1c, b1c, true, threads, frames )
    \    : chroma ? smP
    \             : smP.MergeChroma(i)
 
