@@ -13,6 +13,7 @@
 - ComparisonGen - it takes images from two videos in order to compare them.
 - debandmask_.
 - dldet - helper function for finding black/dirty lines on the borders.
+- Drawrect_ - additional color spaces support.
 - f3kpf - f3kdb with a simple prefilter.
 - FFMS2_ - additional parameters for better font styling.
 - FixBrightnessProtect3 - it changes the brightness of column/row.
