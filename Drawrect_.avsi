@@ -68,7 +68,7 @@ function drawrect(clip c, int x1, int y1, int x2, int y2, int foreclr, int "opac
     mt_lutspa(c, mode="absolute", yexpr=drawstrm, uexpr=drawstrmuv, vexpr=drawstrmuv, u=chromamode, v=chromamode)
     trim(0,-1)
     mask=loop(FrameCount(c))
-    
+
     mt_lutxy(c, mask, yexpr=drawstry2, uexpr=drawstru2, vexpr=drawstrv2, u=chromamode, v=chromamode, scale_inputs=range, use_expr=1)
 }
 
@@ -78,7 +78,7 @@ function createrect(clip c, int x1, int y1, int x2, int y2, int "foreclr", int "
     backclr=default(backclr, $008080)
     filled=default(filled, true)
     chroma=default(chroma, false)
-    
+
     yf=getword(foreclr, 2)#byte=2 (n*65536), wordsize=1
     uf=getword(foreclr, 2)
     vf=getword(foreclr, 2)
