@@ -1,4 +1,5 @@
-#Drawrect 0.8
+#Drawrect 0.9
+#0.9: createrect - fixed chroma processing when the clip is 32-bit.
 #0.8: createrect - removed parameter "full_range".
 #     Added support for other colorspaces than YUV420.
 #     Cached the mask result.
@@ -100,7 +101,7 @@ function createrect(clip c, int x1, int y1, int x2, int y2, int "foreclr", int "
     drawstru=buildrectexp(xl2, yl2, xh2, yh2, uf, ub, filled, "scalef")
     drawstrv=buildrectexp(xl2, yl2, xh2, yh2, vf, vb, filled, "scalef")
     mt_lutspa(c, mode="absolute", yexpr=drawstry, uexpr=drawstru, vexpr=drawstrv, u=chromamode, v=chromamode)
-    if (ComponentSize(c) == 4)
+    if (chroma && ComponentSize(c) == 4)
     {
         Expr("", "x 0 > 1 0 ?")
     }
