@@ -1,4 +1,5 @@
-#Drawrect 0.9
+#Drawrect 0.10
+#0.10: createrect - added parameter crops (default false) - when true the same syntax as Crop() is used.
 #0.9: createrect - fixed chroma processing when the clip is 32-bit.
 #0.8: createrect - removed parameter "full_range".
 #     Added support for other colorspaces than YUV420.
@@ -73,12 +74,13 @@ function drawrect(clip c, int x1, int y1, int x2, int y2, int foreclr, int "opac
     mt_lutxy(c, mask, yexpr=drawstry2, uexpr=drawstru2, vexpr=drawstrv2, u=chromamode, v=chromamode, scale_inputs=range, use_expr=1)
 }
 
-function createrect(clip c, int x1, int y1, int x2, int y2, int "foreclr", int "backclr", bool "filled", bool "chroma"){
+function createrect(clip c, int x1, int y1, int x2, int y2, int "foreclr", int "backclr", bool "filled", bool "chroma", bool "crops"){
     #chroma=true (default) to process chroma.  This function is meant to draw white rect's for masks, so defaults to false.
     foreclr=default(foreclr, $FF8080)
     backclr=default(backclr, $008080)
     filled=default(filled, true)
     chroma=default(chroma, false)
+    crops=default(crops, false)
 
     yf=getword(foreclr, 2)#byte=2 (n*65536), wordsize=1
     uf=getword(foreclr, 2)
@@ -86,10 +88,34 @@ function createrect(clip c, int x1, int y1, int x2, int y2, int "foreclr", int "
     yb=getword(backclr, 2)
     ub=getword(backclr, 2)
     vb=getword(backclr, 2)
-    xl=min(x1, x2)#sort the coordinates
-    xh=max(x1, x2)
-    yl=min(y1, y2)
-    yh=max(y1, y2)
+    if (crops)
+    {
+        xl=x1
+        if (xl==0&&x2==0)
+        {
+            xh=0
+        }
+        else
+        {
+            xh=x2>0?(x1+x2):x2==0?Width(c):(Width(c)+x2)
+        }
+        yl=y1
+        if (yl==0&&y2==0)
+        {
+            yh=0
+        }
+        else
+        {
+            yh=y2>0?(y1+y2):y2==0?Height(c):(Height(c)+y2)
+        }
+    }
+    else
+    {
+        xl=min(x1, x2)#sort the coordinates
+        xh=max(x1, x2)
+        yl=min(y1, y2)
+        yh=max(y1, y2)
+    }
     subsampling_x=IsRGB(c)||Is444(c)?1:IsYV411(c)?4:2
     subsampling_y=Is420(c)?2:1
     xl2=ceil(xl/subsampling_x)
