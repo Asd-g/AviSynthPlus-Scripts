@@ -1,9 +1,22 @@
 ### AutoResize function for AviSynth - intelligent resize to 1080p, 720p, SD (720px wide) or any custom resolution
 
 
+/*
+Requirements:
+AviSynth+ 3.6+
+avsresize (for z_ resizer), DPID (for dpid/dpidraw resizer)
+fmtconv (for fmtc_resample resizer)
+SSIM_downsample (for SSIM_downsample resizer)
+ResizeShader(for resizeshader resizer)
+FillBorders (for fill_margins=true and crop_values=true)
+avs_libplacebo (for libplacebo_Resample)
+RT_Stats (for fmtc_resample and interlaced=true)
+*/
+
+
 ### Usage ###
 ###
-# AutoResize(clip c, string mode, int "left", int "top", int "right", int "bottom", string "resizer", string "dither_type", bool "fill_margins", bool "mod2", string "args")
+# AutoResize(clip c, string mode, int "left", int "top", int "right", int "bottom", string "resizer", string "dither_type", bool "fill_margins", bool "mod2", string "args", int "dmode", bool "crop_values", bool "interlaced")
 ###
 ## Parameters ##
 #---------------
@@ -18,9 +31,11 @@
 # If the values are equal to 1, FillMargins 1 line + Resizer_crop for 1 line are used.
 #---------------
 # resizer (default z_Spline36Resize): What resizer to be used.
+# Other possibilities: dpid, dpidraw, fmtc_resample, resizeshader, ssim_downsample, libplacebo_Resample...
 #---------------
-# dither_type (default ordered for z_ resizers): What dither type to be used if the resizer has dither option.
-# Currently valid only for z_ resizers. dither_type="no" must be used if the used resizer doesn't have dither option.
+# dither_type (default "ordered"): What dither type to be used.
+# Allowed values: "none", "ordered", "error_diffusion".
+# It has no effect for resizer other than z_ / fmtc_resample / SSIM_downsample.
 #---------------
 # fill_margins (default left=top=right=bottom=0 if fill_margins=false): Whether to use FillMargins to fill 1 line on: left; top; right; bottom.
 #---------------
@@ -28,6 +43,13 @@
 # It has effect only for non-420 video.
 #---------------
 # args (default ""): Specify additional resizer arguments.
+#---------------
+# dmode (default 0): What dither type to be used for fmtc_resample other than 0/1/6.
+#---------------
+# crop_values(default true when at least of left/top/right/bottom > 0, otherwise false): Whether to use left/top/right/bottom parameters.
+# false: scr_left like parameters can be passed as args value.
+#---------------
+# interlaced (default false): Whether the video is interlaced (valid only for z_ and fmtc_resample resizers).
 
 
 ### Examples ###
@@ -66,6 +88,13 @@ AutoResize(720, resizer="z_BicubicResize", args="b=-0.25, c=0.125") # Assume 192
 
 ### Changelog ###
 #---------------
+# 1.0.0
+# Added parameter dmode.
+# Improved evaluating of the different resizers.
+# Added support for libplacebo_Resample.
+# Added parameter crop_values.
+# Added parameter interlaced.
+#---------------
 # Added support for some kernels that don't have parameters src_left/src_top/src_width/src_height: DPID, DPIDraw, fmtc_resample, ResizeShader, SSIM_downsample.
 #---------------
 # Added paramters mod2 and args.
@@ -83,7 +112,7 @@ AutoResize(720, resizer="z_BicubicResize", args="b=-0.25, c=0.125") # Assume 192
 # Added dither_type parameter.
 
 
-function AutoResize(clip c, val mode, int "left", int "top", int "right", int "bottom", string "resizer", string "dither_type", bool "fill_margins", bool "mod2", string "args")
+function AutoResize(clip c, val mode, int "left", int "top", int "right", int "bottom", string "resizer", string "dither_type", bool "fill_margins", bool "mod2", string "args", int "dmode", bool "crop_values", bool "interlaced")
 {
     left = default(left, 0)
     top = default(top, 0)
@@ -96,7 +125,12 @@ function AutoResize(clip c, val mode, int "left", int "top", int "right", int "b
     Assert(bottom <= 0, "AutoResize: bottom must be <= 0.")
 
     resizer = default(resizer, "z_Spline36Resize")
-    dither_type = default(dither_type,  "ordered")
+    resizer = lcase(resizer)
+
+    z_check = lcase(LeftStr(resizer, 2)) == "z_"
+    dither_type = ((z_check) || (resizer == "fmtc_resample")) ? default(dither_type, "ordered") : "no"
+    Assert((dither_type == "no") || (dither_type == "none") || (dither_type == "ordered") || (dither_type == "error_diffusion"), "AutoResize: wrong dither_type.")
+
     mod2 = default(mod2, false)
 
     newsize = IsString(mode) && lcase(mode) == "sd" ? _AutoResizeSD(c, top, bottom) : _AutoResizeHD(c, mode, left, top, right, bottom, mod2)
@@ -122,19 +156,86 @@ function AutoResize(clip c, val mode, int "left", int "top", int "right", int "b
     c = fill_margins ? FillMargins(c, proc_left, proc_top, proc_right, proc_bottom) : c
 
     args = defined(args) ? ", " + args : ""
-    resizer = lcase(resizer)
+    crop_values = default(crop_values, ((left > 0) || (top > 0) || (right > 0) || (bottom > 0)) ? true : false)
+    interlaced = default(interlaced, false)
 
-    if (resizer == "dpid" || resizer == "dpidraw" || resizer == "fmtc_resample" || resizer == "resizeshader" || resizer == "ssim_downsample")
+    if (z_check)
+    {
+        if (interlaced)
+        {
+            if (propGetType(c, "_FieldBased") > 0)
+            {
+                field = propGetInt(c, "_FieldBased")
+                propDelete(c, "_FieldBased")
+            }
+            else
+            {
+                field = -1
+            }
+
+            kernel = MidStr(resizer, 3, StrLen(resizer) - 8)
+
+            (crop_values) ? eval("z_ConvertFormat" + "(c," + newsize + ", src_left=proc_left, src_top=proc_top, src_width=-proc_right, src_height=-proc_bottom, dither_type=dither_type, interlaced=true, resample_filter=kernel" + args + ")") :
+            \ eval("z_ConvertFormat" + "(c," + newsize + ", dither_type=dither_type, interlaced=true, resample_filter=kernel" + args + ")")
+
+            if (field != -1)
+            {
+                propSet("_FieldBased", field)
+            }
+        }
+        else
+        {
+            return (crop_values) ? eval(resizer + "(c," + newsize + ", src_left=proc_left, src_top=proc_top, src_width=-proc_right, src_height=-proc_bottom, dither=dither_type" + args + ")") :
+            \ eval(resizer + "(c," + newsize + ", dither=dither_type" + args + ")")
+        }
+
+    }
+    else if (resizer == "fmtc_resample")
+    {
+        if (interlaced)
+        {
+            Assert((propGetType(c, "_FieldBased") > 0) && (propGetInt(c, "_FieldBased") > 0), "AutoResize: frame propery '_FieldBased' must be either 1 or 2.")
+
+            SeparateFields(c)
+            newsize = LeftStr(newsize, FindStr(newsize, ",")) + String(RT_NumberValue(RightStr(newsize, StrLen(newsize) - FindStr(newsize, ","))) / 2)
+            (crop_values) ? eval(resizer + "(" + newsize + ", sx=proc_left, sy=proc_top, sw=-proc_right, sh=-proc_bottom" + args + ")") :
+            \ eval(resizer + "(" + newsize + args + ")")
+            Weave()
+        }
+        else
+        {
+            (crop_values) ? eval(resizer + "(c," + newsize + ", sx=proc_left, sy=proc_top, sw=-proc_right, sh=-proc_bottom, interlaced=0" + args + ")") :
+            \ eval(resizer + "(c, interlaced=0," + newsize + args + ")")
+        }
+
+        if (BitsPerComponent() != BitsPerComponent(c))
+        {
+            dmod = (dither_type == "none") ? 1 : (dither_type == "ordered") ? 0 : 6
+            dmode = default(dmode, dmod)
+            fmtc_bitdepth(BitsPerComponent(c), dmode=dmode)
+        }
+    }
+    else if (resizer == "ssim_downsample")
+    {
+        return eval(resizer + "(c," + newsize + ", dither=dither_type" + args + ")")
+    }
+    else if (resizer == "dpid" || resizer == "dpidraw")
     {
         return eval(resizer + "(c," + newsize + args + ")")
     }
-    else if (lcase(dither_type) != "no")
+    else if (resizer == "resizeshader")
     {
-        return eval(resizer + "(c," + newsize + ", src_left=proc_left, src_top=proc_top, src_width=-proc_right, src_height=-proc_bottom, dither=dither_type" + args + ")")
+        return eval(resizer + "(c," + newsize + args + ")")
     }
-    else
+    else if (resizer == "libplacebo_resample")
     {
-        return eval(resizer + "(c," + newsize + ", src_left=proc_left, src_top=proc_top, src_width=-proc_right, src_height=-proc_bottom" + args + ")")
+        return (crop_values) ? eval(resizer + "(c," + newsize + ", sx=proc_left, sy=proc_top, src_width= Width(c)-proc_left-proc_right, src_height=Height(c)-proc_top-proc_bottom" + args + ")") :
+        \ eval(resizer + "(c," + newsize + args + ")")
+    }
+    else # internal avs resizers, ResampleMT resizers
+    {
+        return (crop_values) ? eval(resizer + "(c," + newsize + ", src_left=proc_left, src_top=proc_top, src_width=-proc_right, src_height=-proc_bottom" + args + ")") :
+        \ eval(resizer + "(c," + newsize + args + ")")
     }
 }
 
