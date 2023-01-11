@@ -18,6 +18,7 @@ by PL
 ## Parameters ##
 #---------------
 # c: Input clip.
+# Only progessive video is supported.
 #---------------
 # cTop, cBottom, cLeft, cRight (default 0): The number of lines to be filtered along each edge.
 # If single number is used: it's applied for all three planes.
@@ -103,6 +104,9 @@ BalanceBorders/bbmod([60,20,40], cleft=[40,20,10], thresh=[12,4,5], blur=[100,99
 
 ### Changelog ###
 #---------------
+# Added note that only progressive video is supported.
+# Improved some error messages.
+#---------------
 # Fixed nuked _ChromaLocation frame property if available in the source.
 #---------------
 # Fixed processing when the clip has only one plane.
@@ -171,6 +175,7 @@ Function bbmod(clip c, val "cTop", val "cBottom", val "cLeft", val "cRight", val
 Function bb_process(clip c, int func_name, val "cTop", val "cBottom", val "cLeft", val "cRight", val "thresh", val "blur", bool "y", bool "u", bool "v", string "cloc")
 {
     Assert(isYUV(c), "This is not an YUV/Y clip.")
+    Assert(!(propGetType(c, "_FieldBased") > 0 && propGetInt(c, "_FieldBased") > 0), "Only progressive video is supported.")
 
     y = Default(y, true)
     u = Default(u, true)
@@ -256,8 +261,8 @@ Function bb_process(clip c, int func_name, val "cTop", val "cBottom", val "cLeft
 
                 if (i == 0)
                 {
-                    Assert(cleft_a[i] * 4 < Width() && cright_a[i] * 4 < Width(), "cLeft*4, cRight*4 has to be < width.")
-                    Assert(ctop_a[i] * 4 < Height() && cbottom_a[i] * 4 < Height(), "cTop*4, cBottom*4 has to be < height.")
+                    Assert(cleft_a[i] * 4 < Width() && cright_a[i] * 4 < Width(), "cLeft / cRight must be lower than " + String(Width() / 4) + ".")
+                    Assert(ctop_a[i] * 4 < Height() && cbottom_a[i] * 4 < Height(), "cTop / cBottom must be lower than " + String(Height() / 4) + ".")
 
                     if (ctop_a[i] > 0)
                     {
@@ -292,8 +297,8 @@ Function bb_process(clip c, int func_name, val "cTop", val "cBottom", val "cLeft
                 }
                 else
                 {
-                    Assert(BitRShiftL(cleft_a[i] * 4, chrw) < Width() && BitRShiftL(cright_a[i] * 4, chrw) < Width(), "cLeft*4, cRight*4 has to be < width.")
-                    Assert(BitRShiftL(ctop_a[i] * 4, chrh) < Height() && BitRShiftL(cbottom_a[i] * 4, chrh) < Height(), "cTop*4, cBottom*4 has to be < height.")
+                    Assert(BitRShiftL(cleft_a[i] * 4, chrw) < Width() && BitRShiftL(cright_a[i] * 4, chrw) < Width(), "cLeft / cRight must be lower than " + String(BitLShift(Width(), chrw) / 4) + ".")
+                    Assert(BitRShiftL(ctop_a[i] * 4, chrh) < Height() && BitRShiftL(cbottom_a[i] * 4, chrh) < Height(), "cTop / cBottom must be lower than " + String(BitLShift(Height(), chrh) / 4) + ".")
 
                     if (ctop_a[i] > 1)
                     {
@@ -350,8 +355,8 @@ Function bb_process(clip c, int func_name, val "cTop", val "cBottom", val "cLeft
 
                 if (i == 0)
                 {
-                    Assert(cleft_a[i] * 4 < Width() && cright_a[i] * 4 < Width(), "cLeft*4, cRight*4 has to be < width.")
-                    Assert(ctop_a[i] * 4 < Height() && cbottom_a[i] * 4 < Height(), "cTop*4, cBottom*4 has to be < height.")
+                    Assert(cleft_a[i] * 4 < Width() && cright_a[i] * 4 < Width(), "cLeft / cRight must be lower than " + String(Width() / 4) + ".")
+                    Assert(ctop_a[i] * 4 < Height() && cbottom_a[i] * 4 < Height(), "cTop / cBottom must be lower than " + String(Height() / 4) + ".")
 
                     if (ctop_a[i] > 0)
                     {
@@ -386,8 +391,8 @@ Function bb_process(clip c, int func_name, val "cTop", val "cBottom", val "cLeft
                 }
                 else
                 {
-                    Assert(BitRShiftL(cleft_a[i] * 4, chrw) < Width() && BitRShiftL(cright_a[i] * 4, chrw) < Width(), "cLeft*4, cRight*4 has to be < width.")
-                    Assert(BitRShiftL(ctop_a[i] * 4, chrh) < Height() && BitRShiftL(cbottom_a[i] * 4, chrh) < Height(), "cTop*4, cBottom*4 has to be < height.")
+                    Assert(BitRShiftL(cleft_a[i] * 4, chrw) < Width() && BitRShiftL(cright_a[i] * 4, chrw) < Width(), "cLeft / cRight must be lower than " + String(BitLShift(Width(), chrw) / 4) + ".")
+                    Assert(BitRShiftL(ctop_a[i] * 4, chrh) < Height() && BitRShiftL(cbottom_a[i] * 4, chrh) < Height(), "cTop / cBottom must be lower than " + String(BitLShift(Height(), chrh) / 4) + ".")
 
                     if (ctop_a[i] > 1)
                     {
