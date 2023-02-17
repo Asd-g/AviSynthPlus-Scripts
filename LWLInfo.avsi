@@ -34,6 +34,7 @@ The list below shows what the frame properties values corresponds to:
 "2020_12" (15)
 "st2084" (16)
 "std-b67" (18)
+"prophoto" (30)
 
 ####### primaries #######
 "709" (1)
@@ -48,6 +49,7 @@ The list below shows what the frame properties values corresponds to:
 "st431-2" (11)
 "st432-1" (12)
 "jedec-p22" (22)
+"prophoto" (30)
 
 ####### color range #######
 "limited" (1)
@@ -73,6 +75,8 @@ false (0)
 
 
 ### Changelog ###
+# - Added info about prophoto transfer and primaries.
+####
 # - Fixed missed default values.
 ####
 # - Added new D2VSource frame properties (_FieldOperation, _FieldOrder, _Film, _ProgressiveFrame, _RFF, _TFF).
