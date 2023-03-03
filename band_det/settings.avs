@@ -51,32 +51,47 @@ thSCD1 = (BLOCKSIZE*BLOCKSIZE) * 64
 ### BANDING DETECTION RELATED
 
 
-# If CAMBI mean/harmonic_mean of the scene or max of the frame from the scene is above this threshold, the scene will be saved.
-# The value of 5 for 1080p resolution is reference. If the clip is resized (source1), this value should be changed according to the resolution.
-# If EOTF is 'pq', lower value would be better (4.0 for 1080p).
-val_ = 5 # 1080p SDR
-#val_ = 5 * (3 / 6.75) # 480p SDR
-#val_ = 5 * (3 / 5.625) # 576p SDR
-#val_ = 5 * (3 / 4.5) # 720p SDR
-#val_ = 5 * (3 / 1.5) # 2160p SDR
-#val_ = 4 # 1080p HDR
-threshoold = val_
+/*
+If CAMBI mean/harmonic_mean of the scene or max of the frame from the scene is above this threshold, the scene will be saved.
+The value of 5 for 1080p resolution is reference. If the clip is resized (source1), this value should be changed according to the resolution.
+If EOTF is 'pq', lower value would be better (4.0 for 1080p).
+*/
+threshoold = 5 # 1080p SDR
+#threshoold = 5 * (3 / 6.75) # 480p SDR
+#threshoold = 5 * (3 / 5.625) # 576p SDR
+#threshoold = 5 * (3 / 4.5) # 720p SDR
+#threshoold = 5 * (3 / 1.5) # 2160p SDR
+#threshoold = 4.5 # 1080p HDR
 
-# Whether the threshold is compared to 'mean', 'harmonic_mean', 'max' or 'mix'.
+/*
+Whether the threshold is compared to 'mean', 'harmonic_mean', 'max' or 'mix'.
+*/
 check = "mix"
 
-# Lower values give more weight of the scenes with fast motion.
+/*
+Lower values give more weight of the scenes with fast motion.
+*/
 topk = 0.5
 
-# Lower values give more weight of the dark areas/frames.
-# If EOTF is 'pq', lower value should be used (0.01).
+/*
+Lower values give more weight of the dark areas/frames.
+If EOTF is 'pq', lower value should be used (0.01).
+*/
 tvi_threshold = 0.019 # SDR
-#tvi_threshold = 0.01 # HDR
+#tvi_threshold = 0.012 # HDR
 
-# The EOTF used to compute the visibility thresholds.
-# Possible values: bt1886 and pq.
+/*
+The EOTF used to compute the visibility thresholds.
+Possible values: bt1886 and pq.
+*/
 eotf = "bt1886" # SDR
 #eotf = "pq" # HDR
+
+/*
+Maximum contrast in log luma level (2^max_log_contrast) at 10-bits, e.g., 2 is equivalent to 4 luma levels at 10-bit and 1 luma level at 8-bit.
+*/
+max_log_contrast = 2 # SDR
+#max_log_contrast = 1 # HDR
 
 
 ################################

@@ -5,7 +5,7 @@ final_file = FolderName + "\" + "final.txt"
 zero_value = FolderName + "\" + "scene_cambi_zero.txt"
 
 source = (VarExist("source1")) ? source1 : source
-opt = "topk=" + String(topk) + " tvi_threshold=" + String(tvi_threshold) + " eotf=" + eotf
+opt = "topk=" + String(topk) + " tvi_threshold=" + String(tvi_threshold) + " eotf=" + eotf + " max_log_contrast=" + String(max_log_contrast)
 
 #  Banding detection
 
