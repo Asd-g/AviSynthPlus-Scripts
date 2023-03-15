@@ -1,7 +1,7 @@
 ### A script to change the brightness of row/column.
 
 
-### Requirements - AviSynth+ 3.6+.
+### Requirements - AviSynth+ 3.7.1 or later.
 
 
 ### Usage ###
@@ -34,6 +34,10 @@
 
 
 ### Changelog ###
+#---------------
+# Changed required AviSynth+ version.
+# Code cleaned.
+# 32-bit clips are assumed within range [0, 1] now.
 #---------------
 # Fixed nuked _ChromaLocation frame property if available in the source.
 #---------------
@@ -87,11 +91,6 @@
 
 Function FixRBr(clip c, val row, val adj_val, val "prot_val", val "upper", val "prot_val2")
 {
-    if (propGetType(c, "_ChromaLocation") > 0)
-    {
-        cl = propGetInt(c, "_ChromaLocation")
-    }
-
     if (IsArray(row))
     {
         n = row.ArraySize() - 1
@@ -112,10 +111,7 @@ Function FixRBr(clip c, val row, val adj_val, val "prot_val", val "upper", val "
         FixRBr_(c, row, adj_val, prot_val, upper, prot_val2)
     }
 
-    if (propGetType(c, "_ChromaLocation") > 0)
-    {
-        propSet("_ChromaLocation", cl)
-    }
+    propCopy(c)
 }
 
 Function FixCBr(clip c, val column, val adj_val, val "prot_val", val "upper", val "prot_val2")
@@ -145,10 +141,7 @@ Function FixCBr(clip c, val column, val adj_val, val "prot_val", val "upper", va
         FixCBr_(c, column, adj_val, prot_val, upper, prot_val2)
     }
 
-    if (propGetType(c, "_ChromaLocation") > 0)
-    {
-        propSet("_ChromaLocation", cl)
-    }
+    propCopy(c)
 }
 
 Function FixRBr_(clip c, int row, float adj_val, float "prot_val", bool "upper", float "prot_val2")
@@ -156,6 +149,8 @@ Function FixRBr_(clip c, int row, float adj_val, float "prot_val", bool "upper",
     Assert(IsYUV(c), "FixRBr: Only YUV/Y clips allowed.")
     Assert(adj_val <= 100, "FixRBr: adj_val max value 100.")
     Assert(adj_val >= -100, "FixRBr: adj_val min value -100.")
+
+    levels = (ComponentSize(c) == 4) ? "full" : "limited"
 
     if (adj_val == 0)
     {
@@ -177,46 +172,10 @@ Function FixRBr_(clip c, int row, float adj_val, float "prot_val", bool "upper",
         Assert((prot_val - prot_val2) >= 19, "FixRBr: The difference between prot_val and prot_val2 must be >= 19.")
     }
 
-    if (Defined(prot_val) && !Defined(upper))
-    {
-        upper = true
-    }
-
     num_comp = NumComponents(c) == 3
     Crop(num_comp ? ExtractY(c) : c, 0, row, 0, 1)
 
-    if (!Defined(prot_val) && adj_val > 0)
-    {
-        Expr("x 16 scaleb - 0 <= 16 scaleb 235 scaleb "+ string(adj_val * 2.19) +" scaleb - 16 scaleb - 0 <= 0.01 235 scaleb "+ string(adj_val * 2.19) +" scaleb - 16 scaleb - ? / 219 scaleb * x 16 scaleb - 235 scaleb "+ string(adj_val * 2.19) +" scaleb - 16 scaleb - 0 <= 0.01 235 scaleb "+ string(adj_val * 2.19) +" scaleb - 16 scaleb - ? / 219 scaleb * 16 scaleb + ? 16 scaleb 235 scaleb clip")
-    }
-    else if (!Defined(prot_val) && adj_val < 0)
-    {
-        Expr("x 16 scaleb - 0 <= 16 scaleb 219 scaleb / 235 scaleb "+ string(adj_val * 2.19) +" scaleb + 16 scaleb - * x 16 scaleb - 219 scaleb / 235 scaleb "+ string(adj_val * 2.19) +" scaleb + 16 scaleb - * 16 scaleb + ? 16 scaleb 235 scaleb clip")
-    }
-    else if (!Defined(prot_val2) && adj_val > 0 && upper == true)
-    {
-        Expr("x 16 scaleb - 0 <= 16 scaleb 235 scaleb "+ string(adj_val * 2.19) +" scaleb - 16 scaleb - 0 <= 0.01 235 scaleb "+ string(adj_val * 2.19) +" scaleb - 16 scaleb - ? / 219 scaleb * x 16 scaleb - 235 scaleb "+ string(adj_val * 2.19) +" scaleb - 16 scaleb - 0 <= 0.01 235 scaleb "+ string(adj_val * 2.19) +" scaleb - 16 scaleb - ? / 219 scaleb * 16 scaleb + ? x "+ string(prot_val) +" scaleb - -10 scaleb / 0 max 1 min * x x "+ string(prot_val) +" scaleb 10 scaleb - - 10 scaleb / 0 max 1 min * + 16 scaleb 235 scaleb clip")
-    }
-    else if (!Defined(prot_val2) && adj_val > 0 && upper == false)
-    {
-        Expr("x 16 scaleb - 0 <= 16 scaleb 235 scaleb "+ string(adj_val * 2.19) +" scaleb - 16 scaleb - 0 <= 0.01 235 scaleb "+ string(adj_val * 2.19) +" scaleb - 16 scaleb - ? / 219 scaleb * x 16 scaleb - 235 scaleb "+ string(adj_val * 2.19) +" scaleb - 16 scaleb - 0 <= 0.01 235 scaleb "+ string(adj_val * 2.19) +" scaleb - 16 scaleb - ? / 219 scaleb * 16 scaleb + ? "+ string(prot_val) +" scaleb x - -10 scaleb / 0 max 1 min * x "+ string(prot_val) +" scaleb 10 scaleb + x - 10 scaleb / 0 max 1 min * + 16 scaleb 235 scaleb clip")
-    }
-    else if (!Defined(prot_val2) && adj_val < 0 && upper == true)
-    {
-        Expr("x 16 scaleb - 0 <= 16 scaleb 219 scaleb / 235 scaleb "+ string(adj_val * 2.19) +" scaleb + 16 scaleb - * x 16 scaleb - 219 scaleb / 235 scaleb "+ string(adj_val * 2.19) +" scaleb + 16 scaleb - * 16 scaleb + ? x "+ string(prot_val) +" scaleb - -10 scaleb / 0 max 1 min * x x "+ string(prot_val) +" scaleb 10 scaleb - - 10 scaleb / 0 max 1 min * + 16 scaleb 235 scaleb clip")
-    }
-    else if (!Defined(prot_val2) && adj_val < 0 && upper == false)
-    {
-        Expr("x 16 scaleb - 0 <= 16 scaleb 219 scaleb / 235 scaleb "+ string(adj_val * 2.19) +" scaleb + 16 scaleb - * x 16 scaleb - 219 scaleb / 235 scaleb "+ string(adj_val * 2.19) +" scaleb + 16 scaleb - * 16 scaleb + ? "+ string(prot_val) +" scaleb x - -10 scaleb / 0 max 1 min * x "+ string(prot_val) +" scaleb 10 scaleb + x - 10 scaleb / 0 max 1 min * + 16 scaleb 235 scaleb clip")
-    }
-    else if (Defined(prot_val2) && adj_val > 0)
-    {
-        Expr("x 16 scaleb - 0 <= 16 scaleb 235 scaleb "+ string(adj_val * 2.19) +" scaleb - 16 scaleb - 0 <= 0.01 235 scaleb "+ string(adj_val * 2.19) +" scaleb - 16 scaleb - ? / 219 scaleb * x 16 scaleb - 235 scaleb "+ string(adj_val * 2.19) +" scaleb - 16 scaleb - 0 <= 0.01 235 scaleb "+ string(adj_val * 2.19) +" scaleb - 16 scaleb - ? / 219 scaleb * 16 scaleb + ? x "+ string(prot_val) +" scaleb - -10 scaleb / 0 max 1 min * x x "+ string(prot_val) +" scaleb 10 scaleb - - 10 scaleb / 0 max 1 min * + "+ string(prot_val2) +" scaleb x - -10 scaleb / 0 max 1 min * x "+ string(prot_val2) +" scaleb 10 scaleb + x - 10 scaleb / 0 max 1 min * + 16 scaleb 235 scaleb clip")
-    }
-    else if (Defined(prot_val2) && adj_val < 0)
-    {
-        Expr("x 16 scaleb - 0 <= 16 scaleb 219 scaleb / 235 scaleb "+ string(adj_val * 2.19) +" scaleb + 16 scaleb - * x 16 scaleb - 219 scaleb / 235 scaleb "+ string(adj_val * 2.19) +" scaleb + 16 scaleb - * 16 scaleb + ? x "+ string(prot_val) +" scaleb - -10 scaleb / 0 max 1 min * x x "+ string(prot_val) +" scaleb 10 scaleb - - 10 scaleb / 0 max 1 min * + "+ string(prot_val2) +" scaleb x - -10 scaleb / 0 max 1 min * x "+ string(prot_val2) +" scaleb 10 scaleb + x - 10 scaleb / 0 max 1 min * + 16 scaleb 235 scaleb clip")
-    }
+    process_lines_(adj_val, prot_val, upper, prot_val2, levels)
 
     if (num_comp)
     {
@@ -234,6 +193,8 @@ Function FixCBr_(clip c, int column, float adj_val, float "prot_val", bool "uppe
     Assert(IsYUV(c), "FixCBr: Only YUV/Y clips allowed.")
     Assert(adj_val <= 100, "FixCBr: adj_val max value 100.")
     Assert(adj_val >= -100, "FixCBr: adj_val min value -100.")
+
+    levels = (ComponentSize(c) == 4) ? "full" : "limited"
 
     if (adj_val == 0)
     {
@@ -255,46 +216,10 @@ Function FixCBr_(clip c, int column, float adj_val, float "prot_val", bool "uppe
         Assert((prot_val - prot_val2) >= 19, "FixCBr: The difference between prot_val and prot_val2 must be >= 19.")
     }
 
-    if (Defined(prot_val) && !Defined(upper))
-    {
-        upper = true
-    }
-
     num_comp = NumComponents(c) == 3
     Crop(num_comp ? ExtractY(c) : c, column, 0, 1, 0)
 
-    if (!Defined(prot_val) && adj_val > 0)
-    {
-        Expr("x 16 scaleb - 0 <= 16 scaleb 235 scaleb "+ string(adj_val * 2.19) +" scaleb - 16 scaleb - 0 <= 0.01 235 scaleb "+ string(adj_val * 2.19) +" scaleb - 16 scaleb - ? / 219 scaleb * x 16 scaleb - 235 scaleb "+ string(adj_val * 2.19) +" scaleb - 16 scaleb - 0 <= 0.01 235 scaleb "+ string(adj_val * 2.19) +" scaleb - 16 scaleb - ? / 219 scaleb * 16 scaleb + ? 16 scaleb 235 scaleb clip")
-    }
-    else if (!Defined(prot_val) && adj_val < 0)
-    {
-        Expr("x 16 scaleb - 0 <= 16 scaleb 219 scaleb / 235 scaleb "+ string(adj_val * 2.19) +" scaleb + 16 scaleb - * x 16 scaleb - 219 scaleb / 235 scaleb "+ string(adj_val * 2.19) +" scaleb + 16 scaleb - * 16 scaleb + ? 16 scaleb 235 scaleb clip")
-    }
-    else if (!Defined(prot_val2) && adj_val > 0 && upper == true)
-    {
-        Expr("x 16 scaleb - 0 <= 16 scaleb 235 scaleb "+ string(adj_val * 2.19) +" scaleb - 16 scaleb - 0 <= 0.01 235 scaleb "+ string(adj_val * 2.19) +" scaleb - 16 scaleb - ? / 219 scaleb * x 16 scaleb - 235 scaleb "+ string(adj_val * 2.19) +" scaleb - 16 scaleb - 0 <= 0.01 235 scaleb "+ string(adj_val * 2.19) +" scaleb - 16 scaleb - ? / 219 scaleb * 16 scaleb + ? x "+ string(prot_val) +" scaleb - -10 scaleb / 0 max 1 min * x x "+ string(prot_val) +" scaleb 10 scaleb - - 10 scaleb / 0 max 1 min * + 16 scaleb 235 scaleb clip")
-    }
-    else if (!Defined(prot_val2) && adj_val > 0 && upper == false)
-    {
-        Expr("x 16 scaleb - 0 <= 16 scaleb 235 scaleb "+ string(adj_val * 2.19) +" scaleb - 16 scaleb - 0 <= 0.01 235 scaleb "+ string(adj_val * 2.19) +" scaleb - 16 scaleb - ? / 219 scaleb * x 16 scaleb - 235 scaleb "+ string(adj_val * 2.19) +" scaleb - 16 scaleb - 0 <= 0.01 235 scaleb "+ string(adj_val * 2.19) +" scaleb - 16 scaleb - ? / 219 scaleb * 16 scaleb + ? "+ string(prot_val) +" scaleb x - -10 scaleb / 0 max 1 min * x "+ string(prot_val) +" scaleb 10 scaleb + x - 10 scaleb / 0 max 1 min * + 16 scaleb 235 scaleb clip")
-    }
-    else if (!Defined(prot_val2) && adj_val < 0 && upper == true)
-    {
-        Expr("x 16 scaleb - 0 <= 16 scaleb 219 scaleb / 235 scaleb "+ string(adj_val * 2.19) +" scaleb + 16 scaleb - * x 16 scaleb - 219 scaleb / 235 scaleb "+ string(adj_val * 2.19) +" scaleb + 16 scaleb - * 16 scaleb + ? x "+ string(prot_val) +" scaleb - -10 scaleb / 0 max 1 min * x x "+ string(prot_val) +" scaleb 10 scaleb - - 10 scaleb / 0 max 1 min * + 16 scaleb 235 scaleb clip")
-    }
-    else if (!Defined(prot_val2) && adj_val < 0 && upper == false)
-    {
-        Expr("x 16 scaleb - 0 <= 16 scaleb 219 scaleb / 235 scaleb "+ string(adj_val * 2.19) +" scaleb + 16 scaleb - * x 16 scaleb - 219 scaleb / 235 scaleb "+ string(adj_val * 2.19) +" scaleb + 16 scaleb - * 16 scaleb + ? "+ string(prot_val) +" scaleb x - -10 scaleb / 0 max 1 min * x "+ string(prot_val) +" scaleb 10 scaleb + x - 10 scaleb / 0 max 1 min * + 16 scaleb 235 scaleb clip")
-    }
-    else if (Defined(prot_val2) && adj_val > 0)
-    {
-        Expr("x 16 scaleb - 0 <= 16 scaleb 235 scaleb "+ string(adj_val * 2.19) +" scaleb - 16 scaleb - 0 <= 0.01 235 scaleb "+ string(adj_val * 2.19) +" scaleb - 16 scaleb - ? / 219 scaleb * x 16 scaleb - 235 scaleb "+ string(adj_val * 2.19) +" scaleb - 16 scaleb - 0 <= 0.01 235 scaleb "+ string(adj_val * 2.19) +" scaleb - 16 scaleb - ? / 219 scaleb * 16 scaleb + ? x "+ string(prot_val) +" scaleb - -10 scaleb / 0 max 1 min * x x "+ string(prot_val) +" scaleb 10 scaleb - - 10 scaleb / 0 max 1 min * + "+ string(prot_val2) +" scaleb x - -10 scaleb / 0 max 1 min * x "+ string(prot_val2) +" scaleb 10 scaleb + x - 10 scaleb / 0 max 1 min * + 16 scaleb 235 scaleb clip")
-    }
-    else if (Defined(prot_val2) && adj_val < 0)
-    {
-        Expr("x 16 scaleb - 0 <= 16 scaleb 219 scaleb / 235 scaleb "+ string(adj_val * 2.19) +" scaleb + 16 scaleb - * x 16 scaleb - 219 scaleb / 235 scaleb "+ string(adj_val * 2.19) +" scaleb + 16 scaleb - * 16 scaleb + ? x "+ string(prot_val) +" scaleb - -10 scaleb / 0 max 1 min * x x "+ string(prot_val) +" scaleb 10 scaleb - - 10 scaleb / 0 max 1 min * + "+ string(prot_val2) +" scaleb x - -10 scaleb / 0 max 1 min * x "+ string(prot_val2) +" scaleb 10 scaleb + x - 10 scaleb / 0 max 1 min * + 16 scaleb 235 scaleb clip")
-    }
+    process_lines_(adj_val, prot_val, upper, prot_val2, levels)
 
     if (num_comp)
     {
@@ -315,4 +240,89 @@ Function FixRowBrightnessProtect2(clip c, int row, float adj_val, float "prot_va
 Function FixColumnBrightnessProtect2(clip c, int row, float adj_val, float "prot_val", bool "upper", float "prot_val2")
 {
     return FixCBr(c, row, adj_val, prot_val, upper, prot_val2)
+}
+
+Function process_lines_(clip c, float adj_val, float "prot_val", bool "upper", float "prot_val2", string "levels")
+{
+    if (Defined(prot_val) && !Defined(upper))
+    {
+        upper = true
+    }
+
+    c
+
+    if (levels == "full")
+    {
+        adj_val1 = String(adj_val / 100.0)
+
+        if (!Defined(prot_val) && adj_val > 0)
+        {
+            Expr("x 0 <= 0.0625 1 "+ adj_val1 +" - 0.00001 max B@ / 0.0625 - x B / ? 0 1 clip")
+        }
+        else if (!Defined(prot_val) && adj_val < 0)
+        {
+            Expr("x 0 <= x x 1 "+ adj_val1 +" + * ? 0 1 clip")
+        }
+        else if (!Defined(prot_val2) && adj_val > 0 && upper == true)
+        {
+            Expr("x 0 <= 0.0625 1 "+ adj_val1 +" - 0.00001 max B@ / 0.0625 - x B / ? x "+ string(prot_val) +" scaleb - -10 scaleb / 0 max 1 min * x x "+ string(prot_val) +" scaleb 10 scaleb - - 10 scaleb / 0 max 1 min * + 0 1 clip")
+        }
+        else if (!Defined(prot_val2) && adj_val > 0 && upper == false)
+        {
+            Expr("x 0 <= 0.0625 1 "+ adj_val1 +" - 0.00001 max B@ / 0.0625 - x B / ? "+ string(prot_val) +" scaleb x - -10 scaleb / 0 max 1 min * x "+ string(prot_val) +" scaleb 10 scaleb + x - 10 scaleb / 0 max 1 min * + 0 1 clip")
+        }
+        else if (!Defined(prot_val2) && adj_val < 0 && upper == true)
+        {
+            Expr("x 0 <= x x 1 "+ adj_val1 +" + * ? x "+ string(prot_val) +" scaleb - -10 scaleb / 0 max 1 min * x x "+ string(prot_val) +" scaleb 10 scaleb - - 10 scaleb / 0 max 1 min * + 0 1 clip")
+        }
+        else if (!Defined(prot_val2) && adj_val < 0 && upper == false)
+        {
+            Expr("x 0 <= x x 1 "+ adj_val1 +" + * ? "+ string(prot_val) +" scaleb x - -10 scaleb / 0 max 1 min * x "+ string(prot_val) +" scaleb 10 scaleb + x - 10 scaleb / 0 max 1 min * + 0 1 clip")
+        }
+        else if (Defined(prot_val2) && adj_val > 0)
+        {
+            Expr("x 0 <= 0.0625 1 "+ adj_val1 +" - 0.00001 max B@ / 0.0625 - x B / ? x "+ string(prot_val) +" scaleb - -10 scaleb / 0 max 1 min * x x "+ string(prot_val) +" scaleb 10 scaleb - - 10 scaleb / 0 max 1 min * + "+ string(prot_val2) +" scaleb x - -10 scaleb / 0 max 1 min * x "+ string(prot_val2) +" scaleb 10 scaleb + x - 10 scaleb / 0 max 1 min * + 0 1 clip")
+        }
+        else if (Defined(prot_val2) && adj_val < 0)
+        {
+            Expr("x 0 <= x x 1 "+ adj_val1 +" + * ? x "+ string(prot_val) +" scaleb - -10 scaleb / 0 max 1 min * x x "+ string(prot_val) +" scaleb 10 scaleb - - 10 scaleb / 0 max 1 min * + "+ string(prot_val2) +" scaleb x - -10 scaleb / 0 max 1 min * x "+ string(prot_val2) +" scaleb 10 scaleb + x - 10 scaleb / 0 max 1 min * + 0 1 clip")
+        }
+    }
+    else
+    {
+        adj_val1 = String(adj_val * 2.19) + " scaleb"
+
+        if (!Defined(prot_val) && adj_val > 0)
+        {
+            Expr("x ymin - C@ 0 <= ymin 219 scaleb "+ adj_val1 +" - 0.00001 max B@ / 219 scaleb * C B / 219 scaleb * ymin + ? ymin ymax clip")
+        }
+        else if (!Defined(prot_val) && adj_val < 0)
+        {
+            Expr("x ymin - C@ 0 <= x C 219 scaleb / 219 scaleb "+ adj_val1 +" + * ymin + ? ymin ymax clip")
+        }
+        else if (!Defined(prot_val2) && adj_val > 0 && upper == true)
+        {
+            Expr("x ymin - C@ 0 <= ymin 219 scaleb "+ adj_val1 +" - 0.00001 max B@ / 219 scaleb * C B / 219 scaleb * ymin + ? x "+ string(prot_val) +" scaleb - -10 scaleb / 0 max 1 min * x x "+ string(prot_val) +" scaleb 10 scaleb - - 10 scaleb / 0 max 1 min * + ymin ymax clip")
+        }
+        else if (!Defined(prot_val2) && adj_val > 0 && upper == false)
+        {
+            Expr("x ymin - C@ 0 <= ymin 219 scaleb "+ adj_val1 +" - 0.00001 max B@ / 219 scaleb * C B / 219 scaleb * ymin + ? "+ string(prot_val) +" scaleb x - -10 scaleb / 0 max 1 min * x "+ string(prot_val) +" scaleb 10 scaleb + x - 10 scaleb / 0 max 1 min * + ymin ymax clip")
+        }
+        else if (!Defined(prot_val2) && adj_val < 0 && upper == true)
+        {
+            Expr("x ymin - C@ 0 <= x C 219 scaleb / 219 scaleb "+ adj_val1 +" + * ymin + ? x "+ string(prot_val) +" scaleb - -10 scaleb / 0 max 1 min * x x "+ string(prot_val) +" scaleb 10 scaleb - - 10 scaleb / 0 max 1 min * + ymin ymax clip")
+        }
+        else if (!Defined(prot_val2) && adj_val < 0 && upper == false)
+        {
+            Expr("x ymin - C@ 0 <= x C 219 scaleb / 219 scaleb "+ adj_val1 +" + * ymin + ? "+ string(prot_val) +" scaleb x - -10 scaleb / 0 max 1 min * x "+ string(prot_val) +" scaleb 10 scaleb + x - 10 scaleb / 0 max 1 min * + ymin ymax clip")
+        }
+        else if (Defined(prot_val2) && adj_val > 0)
+        {
+            Expr("x ymin - C@ 0 <= ymin 219 scaleb "+ adj_val1 +" - 0.00001 max B@ / 219 scaleb * C B / 219 scaleb * ymin + ? x "+ string(prot_val) +" scaleb - -10 scaleb / 0 max 1 min * x x "+ string(prot_val) +" scaleb 10 scaleb - - 10 scaleb / 0 max 1 min * + "+ string(prot_val2) +" scaleb x - -10 scaleb / 0 max 1 min * x "+ string(prot_val2) +" scaleb 10 scaleb + x - 10 scaleb / 0 max 1 min * + ymin ymax clip")
+        }
+        else if (Defined(prot_val2) && adj_val < 0)
+        {
+            Expr("x ymin - C@ 0 <= x C 219 scaleb / 219 scaleb "+ adj_val1 +" + * ymin + ? x "+ string(prot_val) +" scaleb - -10 scaleb / 0 max 1 min * x x "+ string(prot_val) +" scaleb 10 scaleb - - 10 scaleb / 0 max 1 min * + "+ string(prot_val2) +" scaleb x - -10 scaleb / 0 max 1 min * x "+ string(prot_val2) +" scaleb 10 scaleb + x - 10 scaleb / 0 max 1 min * + ymin ymax clip")
+        }
+    }
 }
