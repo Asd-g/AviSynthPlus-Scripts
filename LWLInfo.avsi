@@ -214,14 +214,7 @@ Function LWLInfo(
         add_text_ = """"+ add_text +""""
         add_text_pos_ = """"+ add_text_pos +""""
 
-        if (add_text_ != "" && add_text_pos_ == "top")
-        {
-            temp_prop = add_text_ + "\n"
-        }
-        else
-        {
-            temp_prop = ""
-        }
+        temp_prop = ""
 
         if ("""+ String(framenum) +""") { temp_prop = temp_prop + "Frame Number: " + String(current_frame) + " of " + String(FrameCount()) + "\n" }
         if ("""+ String(picturetype) +""") { if (propGetType("_PictType") > 0) { temp_prop = temp_prop + "Picture Type: " + String(propGetString("_PictType")) + "\n" } }
@@ -266,9 +259,9 @@ Function LWLInfo(
         if ("""+ String(rff) +""") { if (propGetType("_RFF") > 0) { temp_prop = temp_prop + "RFF: " + String(propGetInt("_RFF")) + "\n" } }
         if ("""+ String(tff) +""") { if (propGetType("_TFF") > 0) { temp_prop = temp_prop + "TFF: " + String(propGetInt("_TFF")) + "\n" } }
 
-        if (add_text_ != "" && add_text_pos_ == "bottom")
+        if (add_text_ != "")
         {
-            temp_prop = temp_prop + add_text_ + "\n"
+            temp_prop = (add_text_pos_ == "bottom") ? (temp_prop + add_text_ + "\n") : (add_text_ + "\n" + temp_prop)
         }
 
     return Subtitle(temp_prop, x=x_, y=y_, font=font_, size=size_, text_color=textcolor_, halo_color=halocolor_, align=align_, spc=spc_, lsp=lsp_, font_width=fontwidth_, font_angle=fontangle_) """, after_frame=true)
