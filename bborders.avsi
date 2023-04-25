@@ -21,9 +21,8 @@ by PL
 # Only progessive video is supported.
 #---------------
 # cTop, cBottom, cLeft, cRight (default 0): The number of lines to be filtered along each edge.
-# If single number is used: it's applied for all three planes.
-# If array is used: the first number is applied to luma plane, the second number - u plane, the third number - v plane.
-# If array of two numbers is used: the first number - luma plane, the second number - u and v planes.
+# If single value for cTop/cBottom/cLeft/cRight is used, it will be right shifted by subsampling factor for chroma planes.
+# If two values for cTop/cBottom/cLeft/cRight are given then the second value will be used for the third plane.
 #---------------
 # thresh (default 128.0): Threshold of the filtering.
 # Higher values: more filtering.
@@ -76,10 +75,10 @@ by PL
   #-------------------------------------------------------------------------------------------------------------------------------
 
 
-### Example with arrays (AviSynth 3.6.x required) ###
+### Example with arrays (AviSynth 3.7.1 required) ###
 /*
 BalanceBorders/bbmod([60,20], cleft=[40,20], y=true, u=true, v= false)
-# same as BalanceBorders/bbmod(60, cleft=40, blur=999, y=true, u=false, v=false).BalanceBorders/bbmod(20, cleft=20, y=false, u=true, v=false)
+# same as BalanceBorders/bbmod(60, cleft=40, blur=999, y=true, u=false, v=false).BalanceBorders/bbmod(40, cleft=40, y=false, u=true, v=false)
 */
 ###
 /*
@@ -88,21 +87,24 @@ BalanceBorders/bbmod([60], cleft=[40])
 */
 ###
 /*
-BalanceBorders/bbmod([60,60], cleft=[40,40], thresh=[12,12], blur=[100,100], y=false, u=true, v= true)
-# same as BalanceBorders/bbmod(60, cleft=40, thresh=12, blur=100, y=false) or BalanceBorders/bbmod([1,60,60], cleft=[1,40,40], thresh=[1,12,12], blur=[1,100,100], y=false, u=true, v= true)
+BalanceBorders/bbmod([60,30], cleft=[40,20], thresh=[12,12], blur=[100,100], y=false, u=true, v= true)
+# same as BalanceBorders/bbmod(60, cleft=40, thresh=12, blur=100, y=false) or BalanceBorders/bbmod([1,30,30], cleft=[1,20,20], thresh=[1,12,12], blur=[1,100,100], y=false, u=true, v= true)
 /*
 ###
 /*
 BalanceBorders/bbmod([60,20,40], cleft=[40,20,10], thresh=[12,4,5], blur=[100,999,20])
-# same as BalanceBorders/bbmod(60, cleft=40, thresh=12, blur=100, u=false, v=false).BalanceBorders/bbmod(20, cleft=20, thresh=4, y=false, v=false).BalanceBorders/bbmod(40, cleft=10, thresh=5, blur=20, y=false, u=false)
+# same as BalanceBorders/bbmod(60, cleft=40, thresh=12, blur=100, u=false, v=false).BalanceBorders/bbmod(40, cleft=40, thresh=4, y=false, v=false).BalanceBorders/bbmod(80, cleft=20, thresh=5, blur=20, y=false, u=false)
 */
 ###
 
 
-### Requirements - AviSynth+ >= 3.6, avsresize
+### Requirements - AviSynth+ >= 3.7.1, avsresize
 
 
 ### Changelog ###
+#---------------
+# Changed the behavior of cTop/cBottom/cLeft/cRight values when specified for chroma planes - previously the values were right bit shifted by the subsampling factor (for example, YUV 4:2:0 and cTop=[2,4] means 2px for chroma planes will be filtered - 4 >> 1 (chroma subsampling)); now the values are passed as specified.
+# Changed the required AviSynth+ version.
 #---------------
 # Added note that only progressive video is supported.
 # Improved some error messages.
@@ -144,32 +146,16 @@ BalanceBorders/bbmod([60,20,40], cleft=[40,20,10], thresh=[12,4,5], blur=[100,99
 
 Function BalanceBorders(clip c, val "cTop", val "cBottom", val "cLeft", val "cRight", val "thresh", val "blur", bool "y", bool "u", bool "v", string "cloc")
 {
-    if (propGetType(c, "_ChromaLocation") > 0)
-    {
-        cl = propGetInt(c, "_ChromaLocation")
-    }
-
     bb_process(c, 0, cTop, cBottom, cLeft, cRight, thresh, blur, y, u, v, cloc)
 
-    if (propGetType(c, "_ChromaLocation") > 0)
-    {
-        propSet("_ChromaLocation", cl)
-    }
+    return propCopy(c)
 }
 
 Function bbmod(clip c, val "cTop", val "cBottom", val "cLeft", val "cRight", val "thresh", val "blur", bool "y", bool "u", bool "v", string "cloc")
 {
-    if (propGetType(c, "_ChromaLocation") > 0)
-    {
-        cl = propGetInt(c, "_ChromaLocation")
-    }
-
     bb_process(c, 1, cTop, cBottom, cLeft, cRight, thresh, blur, y, u, v, cloc)
 
-    if (propGetType(c, "_ChromaLocation") > 0)
-    {
-        propSet("_ChromaLocation", cl)
-    }
+    return propCopy(c)
 }
 
 Function bb_process(clip c, int func_name, val "cTop", val "cBottom", val "cLeft", val "cRight", val "thresh", val "blur", bool "y", bool "u", bool "v", string "cloc")
@@ -181,40 +167,45 @@ Function bb_process(clip c, int func_name, val "cTop", val "cBottom", val "cLeft
     u = Default(u, true)
     v = Default(v, true)
 
+    clip_444 = Is444(c)
+    clip_420 = Is420(c)
+    chrh = clip_420 ? [0, 1, 1] : [0, 0, 0]
+    chrw = clip_444 ? [0, 0, 0] : [0, 1, 1]
+
     ctop_a = Defined(cTop) ?
         \ IsArray(cTop) ?
-        \ ArraySize(cTop) == 1 ? [cTop[0], cTop[0], cTop[0]] :
+        \ ArraySize(cTop) == 1 ? [cTop[0], BitRShiftL(cTop[0], chrh[1]), BitRShiftL(cTop[0], chrh[1])] :
         \ ArraySize(cTop) == 2 ? [cTop[0], cTop[1], cTop[1]] :
         \ ArraySize(cTop) == 3 ? [cTop[0], cTop[1], cTop[2]] :
         \ Assert(ArraySize(cTop) == 3, "The cTop values must be no more than three.") :
-        \ [cTop, cTop, cTop] :
+        \ [cTop, BitRShiftL(cTop, chrh[1]), BitRShiftL(cTop, chrh[1])] :
         \ [0, 0, 0]
 
     cbottom_a = Defined(cBottom) ?
         \ IsArray(cBottom) ?
-        \ ArraySize(cBottom) == 1 ? [cBottom[0], cBottom[0], cBottom[0]] :
+        \ ArraySize(cBottom) == 1 ? [cBottom[0], BitRShiftL(cBottom[0], chrh[1]), BitRShiftL(cBottom[0], chrh[1])] :
         \ ArraySize(cBottom) == 2 ? [cBottom[0], cBottom[1], cBottom[1]] :
         \ ArraySize(cBottom) == 3 ? [cBottom[0], cBottom[1], cBottom[2]] :
         \ Assert(ArraySize(cBottom) == 3, "The cBottom values must be no more than three.") :
-        \ [cBottom, cBottom, cBottom] :
+        \ [cBottom, BitRShiftL(cBottom, chrh[1]), BitRShiftL(cBottom, chrh[1])] :
         \ [0, 0, 0]
 
     cleft_a = Defined(cLeft) ?
         \ IsArray(cLeft) ?
-        \ ArraySize(cLeft) == 1 ? [cLeft[0], cLeft[0], cLeft[0]] :
+        \ ArraySize(cLeft) == 1 ? [cLeft[0], BitRShiftL(cLeft[0], chrw[1]), BitRShiftL(cLeft[0], chrw[1])] :
         \ ArraySize(cLeft) == 2 ? [cLeft[0], cLeft[1], cLeft[1]] :
         \ ArraySize(cLeft) == 3 ? [cLeft[0], cLeft[1], cLeft[2]] :
         \ Assert(ArraySize(cLeft) == 3, "The cLeft values must be no more than three.") :
-        \ [cLeft, cLeft, cLeft] :
+        \ [cLeft, BitRShiftL(cLeft, chrw[1]), BitRShiftL(cLeft, chrw[1])] :
         \ [0, 0, 0]
 
     cright_a = Defined(cRight) ?
         \ IsArray(cRight) ?
-        \ ArraySize(cRight) == 1 ? [cRight[0], cRight[0], cRight[0]] :
+        \ ArraySize(cRight) == 1 ? [cRight[0], BitRShiftL(cRight[0], chrw[1]), BitRShiftL(cRight[0], chrw[1])] :
         \ ArraySize(cRight) == 2 ? [cRight[0], cRight[1], cRight[1]] :
         \ ArraySize(cRight) == 3 ? [cRight[0], cRight[1], cRight[2]] :
         \ Assert(ArraySize(cRight) == 3, "The cRight values must be no more than three.") :
-        \ [cRight, cRight, cRight] :
+        \ [cRight, BitRShiftL(cRight, chrw[1]), BitRShiftL(cRight, chrw[1])] :
         \ [0, 0, 0]
 
     thresh_a = Defined(thresh) ?
@@ -240,202 +231,48 @@ Function bb_process(clip c, int func_name, val "cTop", val "cBottom", val "cLeft
     Assert(cloc == "left" || cloc == "top_left" || cloc == "center", "cloc must be one of the values 'left', 'top_left', 'center'.")
 
     source_planes = [y, u, v]
-    clip_444 = Is444(c)
-    clip_420 = Is420(c)
-    chrh = clip_420 ? 1 : 0
-    chrw = clip_444 ? 0 : 1
     num_planes = min(NumComponents(c), 3) - 1
+    plane_a = [ExtractY(c), ExtractU(c), ExtractV(c)]
+    plane_error = ["(Y plane).", "(U plane).", "(V plane)."]
+    ctop_crop = [BitLShift(ctop_a[0], 1), BitLShift(ctop_a[1], 1), BitLShift(ctop_a[2], 1)]
+    cleft_crop = [BitLShift(cleft_a[0], 1), BitLShift(cleft_a[1], 1), BitLShift(cleft_a[2], 1)]
+    cbottom_crop = [BitLShift(cbottom_a[0], 1), BitLShift(cbottom_a[1], 1), BitLShift(cbottom_a[2], 1)]
+    cright_crop = [BitLShift(cright_a[0], 1), BitLShift(cright_a[1], 1), BitLShift(cright_a[2], 1)]
+    yuv_planes = []
+    f_name = (func_name == 0) ? "BalanceTopBorder" : "btb"
 
-    if (func_name == 0)
+    for (i = 0, num_planes)
     {
-        for (i = 0, num_planes)
+        plane_a[i]
+
+        if (source_planes[i])
         {
-            if (i == 0) { ExtractY(c) }
-            else if (i == 1) { ExtractU(c) }
-            else { ExtractV(c) }
+            Assert(blur_a[i] > 0 && blur_a[i] <= 999, "Blur parameter must be between 0..999 " + plane_error[i])
+            Assert(thresh_a[i] > 0.0 && thresh_a[i] <= 128.0, "Thresh parameter must be between 0.0..128.0 " + plane_error[i])
+            Assert(cleft_a[i] * 4 < Width() && cright_a[i] * 4 < Width(), "cLeft / cRight must be lower than " + String(Width() / 4) + " " + plane_error[i])
+            Assert(ctop_a[i] * 4 < Height() && cbottom_a[i] * 4 < Height(), "cTop / cBottom must be lower than " + String(Height() / 4) + " " + plane_error[i])
 
-            if (source_planes[i])
+            (ctop_a[i] > 0) ? (StackVertical(Crop(0, 0, 0, ctop_crop[i]).Eval(f_name + "(ctop_a[i], thresh_a[i], blur_a[i], i, clip_444, clip_420, cloc)"), Crop(0, ctop_crop[i], 0, 0)).TurnRight()) : TurnRight()
+            (cleft_a[i] > 0) ? (StackVertical(Crop(0, 0, 0, cleft_crop[i]).Eval(f_name + "(cleft_a[i], thresh_a[i], blur_a[i], i, clip_444, clip_420, cloc)"), Crop(0, cleft_crop[i], 0, 0)).TurnRight()) : TurnRight()
+            (cbottom_a[i] > 0) ? (StackVertical(Crop(0, 0, 0, cbottom_crop[i]).Eval(f_name + "(cbottom_a[i] , thresh_a[i], blur_a[i], i, clip_444, clip_420, cloc)"), Crop(0, cbottom_crop[i], 0, 0)).TurnRight()) : TurnRight()
+            (cright_a[i] > 0) ? StackVertical(Crop(0, 0, 0, cright_crop[i]).Eval(f_name + "(cright_a[i], thresh_a[i], blur_a[i], i, clip_444, clip_420, cloc)"), Crop(0, cright_crop[i], 0, 0)).TurnRight() : TurnRight()
+
+            if (NumComponents(c) == 1)
             {
-                Assert(blur_a[i] > 0 && blur_a[i] <= 999, "Blur parameter must be between 0..999.")
-                Assert(thresh_a[i] > 0.0 && thresh_a[i] <= 128.0, "Thresh parameter must be between 0.0..128.0.")
-
-                if (i == 0)
-                {
-                    Assert(cleft_a[i] * 4 < Width() && cright_a[i] * 4 < Width(), "cLeft / cRight must be lower than " + String(Width() / 4) + ".")
-                    Assert(ctop_a[i] * 4 < Height() && cbottom_a[i] * 4 < Height(), "cTop / cBottom must be lower than " + String(Height() / 4) + ".")
-
-                    if (ctop_a[i] > 0)
-                    {
-                        ctop_crop = ctop_a[i] * 2
-                        StackVertical(Crop(0, 0, 0, ctop_crop).BalanceTopBorder(ctop_a[i], thresh_a[i], blur_a[i], i, clip_444, clip_420, cloc), Crop(0, ctop_crop, 0, 0)).TurnRight()
-                    }
-                    else { TurnRight() }
-
-                    if (cleft_a[i] > 0)
-                    {
-                        cleft_crop = cleft_a[i] * 2
-                        StackVertical(Crop(0, 0, 0, cleft_crop).BalanceTopBorder(cleft_a[i], thresh_a[i], blur_a[i], i, clip_444, clip_420, cloc), Crop(0, cleft_crop, 0, 0)).TurnRight()
-                    }
-                    else { TurnRight() }
-
-                    if (cbottom_a[i] > 0)
-                    {
-                        cbottom_crop = cbottom_a[i] * 2
-                        StackVertical(Crop(0, 0, 0, cbottom_crop).BalanceTopBorder(cbottom_a[i] , thresh_a[i], blur_a[i], i, clip_444, clip_420, cloc), Crop(0, cbottom_crop, 0, 0)).TurnRight()
-                    }
-                    else { TurnRight() }
-
-                    if (cright_a[i] > 0)
-                    {
-                        cright_crop = cright_a[i] * 2
-                        StackVertical(Crop(0, 0, 0, cright_crop).BalanceTopBorder(cright_a[i], thresh_a[i], blur_a[i], i, clip_444, clip_420, cloc), Crop(0, cright_crop, 0, 0)).TurnRight()
-                    }
-                    else { TurnRight() }
-
-                    if (NumComponents(c) == 1) { return last }
-                    else { yplane = last }
-                }
-                else
-                {
-                    Assert(BitRShiftL(cleft_a[i] * 4, chrw) < Width() && BitRShiftL(cright_a[i] * 4, chrw) < Width(), "cLeft / cRight must be lower than " + String(BitLShift(Width(), chrw) / 4) + ".")
-                    Assert(BitRShiftL(ctop_a[i] * 4, chrh) < Height() && BitRShiftL(cbottom_a[i] * 4, chrh) < Height(), "cTop / cBottom must be lower than " + String(BitLShift(Height(), chrh) / 4) + ".")
-
-                    if (ctop_a[i] > 1)
-                    {
-                        ctop_crop = BitRShiftL(ctop_a[i] * 2, chrh)
-                        StackVertical(Crop(0, 0, 0, ctop_crop).BalanceTopBorder(BitRShiftL(ctop_a[i], chrh), thresh_a[i], blur_a[i], i, clip_444, clip_420, cloc), Crop(0, ctop_crop, 0, 0)).TurnRight()
-                    }
-                    else { TurnRight() }
-
-                    if (cleft_a[i] > 1)
-                    {
-                        cleft_crop = BitRShiftL(cleft_a[i] * 2, chrw)
-                        StackVertical(Crop(0, 0, 0, cleft_crop).BalanceTopBorder(BitRShiftL(cleft_a[i], chrw), thresh_a[i], blur_a[i], i, clip_444, clip_420, cloc), Crop(0, cleft_crop, 0, 0)).TurnRight()
-                    }
-                    else { TurnRight() }
-
-                    if (cbottom_a[i] > 1)
-                    {
-                        cbottom_crop = BitRShiftL(cbottom_a[i] * 2, chrh)
-                        StackVertical(Crop(0, 0, 0, cbottom_crop).BalanceTopBorder(BitRShiftL(cbottom_a[i], chrh), thresh_a[i], blur_a[i], i, clip_444, clip_420, cloc), Crop(0, cbottom_crop, 0, 0)).TurnRight()
-                    }
-                    else { TurnRight() }
-
-                    if (cright_a[i] > 1)
-                    {
-                        cright_crop = BitRShiftL(cright_a[i] * 2, chrw)
-                        StackVertical(Crop(0, 0, 0, cright_crop).BalanceTopBorder(BitRShiftL(cright_a[i], chrw), thresh_a[i], blur_a[i], i, clip_444, clip_420, cloc), Crop(0, cright_crop, 0, 0)).TurnRight()
-                    }
-                    else { TurnRight() }
-
-                    if (i == 1) { uplane = last }
-                    else { vplane = last }
-                }
+                return last
             }
             else
             {
-                if (i == 0) { yplane = last }
-                else if (i == 1) { uplane = last }
-                else { vplane = last }
+                yuv_planes = ArrayAdd(yuv_planes, last)
             }
         }
-    }
-    else
-    {
-        for (i = 0, num_planes)
+        else
         {
-            if (i == 0) { ExtractY(c) }
-            else if (i == 1) { ExtractU(c) }
-            else { ExtractV(c) }
-
-            if (source_planes[i])
-            {
-                Assert(blur_a[i] > 0 && blur_a[i] <= 999, "Blur parameter must be between 0..999.")
-                Assert(thresh_a[i] > 0.0 && thresh_a[i] <= 128.0, "Thresh parameter must be between 0.0..128.0.")
-
-                if (i == 0)
-                {
-                    Assert(cleft_a[i] * 4 < Width() && cright_a[i] * 4 < Width(), "cLeft / cRight must be lower than " + String(Width() / 4) + ".")
-                    Assert(ctop_a[i] * 4 < Height() && cbottom_a[i] * 4 < Height(), "cTop / cBottom must be lower than " + String(Height() / 4) + ".")
-
-                    if (ctop_a[i] > 0)
-                    {
-                        ctop_crop = ctop_a[i] * 2
-                        StackVertical(Crop(0, 0, 0, ctop_crop).btb(ctop_a[i], thresh_a[i], blur_a[i], i, clip_444, clip_420, cloc), Crop(0, ctop_crop, 0, 0)).TurnRight()
-                    }
-                    else { TurnRight() }
-
-                    if (cleft_a[i] > 0)
-                    {
-                        cleft_crop = cleft_a[i] * 2
-                        StackVertical(Crop(0, 0, 0, cleft_crop).btb(cleft_a[i], thresh_a[i], blur_a[i], i, clip_444, clip_420, cloc), Crop(0, cleft_crop, 0, 0)).TurnRight()
-                    }
-                    else { TurnRight() }
-
-                    if (cbottom_a[i] > 0)
-                    {
-                        cbottom_crop = cbottom_a[i] * 2
-                        StackVertical(Crop(0, 0, 0, cbottom_crop).btb(cbottom_a[i] , thresh_a[i], blur_a[i], i, clip_444, clip_420, cloc), Crop(0, cbottom_crop, 0, 0)).TurnRight()
-                    }
-                    else { TurnRight() }
-
-                    if (cright_a[i] > 0)
-                    {
-                        cright_crop = cright_a[i] * 2
-                        StackVertical(Crop(0, 0, 0, cright_crop).btb(cright_a[i], thresh_a[i], blur_a[i], i, clip_444, clip_420, cloc), Crop(0, cright_crop, 0, 0)).TurnRight()
-                    }
-                    else { TurnRight() }
-
-                    if (NumComponents(c) == 1) { return last }
-                    else { yplane = last }
-                }
-                else
-                {
-                    Assert(BitRShiftL(cleft_a[i] * 4, chrw) < Width() && BitRShiftL(cright_a[i] * 4, chrw) < Width(), "cLeft / cRight must be lower than " + String(BitLShift(Width(), chrw) / 4) + ".")
-                    Assert(BitRShiftL(ctop_a[i] * 4, chrh) < Height() && BitRShiftL(cbottom_a[i] * 4, chrh) < Height(), "cTop / cBottom must be lower than " + String(BitLShift(Height(), chrh) / 4) + ".")
-
-                    if (ctop_a[i] > 1)
-                    {
-                        ctop_crop = BitRShiftL(ctop_a[i] * 2, chrh)
-                        StackVertical(Crop(0, 0, 0, ctop_crop).btb(BitRShiftL(ctop_a[i], chrh), thresh_a[i], blur_a[i], i, clip_444, clip_420, cloc), Crop(0, ctop_crop, 0, 0)).TurnRight()
-                    }
-                    else { TurnRight() }
-
-                    if (cleft_a[i] > 1)
-                    {
-                        cleft_crop = BitRShiftL(cleft_a[i] * 2, chrw)
-                        StackVertical(Crop(0, 0, 0, cleft_crop).btb(BitRShiftL(cleft_a[i], chrw), thresh_a[i], blur_a[i], i, clip_444, clip_420, cloc), Crop(0, cleft_crop, 0, 0)).TurnRight()
-                    }
-                    else { TurnRight() }
-
-                    if (cbottom_a[i] > 1)
-                    {
-                        cbottom_crop = BitRShiftL(cbottom_a[i] * 2, chrh)
-                        StackVertical(Crop(0, 0, 0, cbottom_crop).btb(BitRShiftL(cbottom_a[i], chrh), thresh_a[i], blur_a[i], i, clip_444, clip_420, cloc), Crop(0, cbottom_crop, 0, 0)).TurnRight()
-                    }
-                    else { TurnRight() }
-
-                    if (cright_a[i] > 1)
-                    {
-                        cright_crop = BitRShiftL(cright_a[i] * 2, chrw)
-                        StackVertical(Crop(0, 0, 0, cright_crop).btb(BitRShiftL(cright_a[i], chrw), thresh_a[i], blur_a[i], i, clip_444, clip_420, cloc), Crop(0, cright_crop, 0, 0)).TurnRight()
-                    }
-                    else { TurnRight() }
-
-                    if (i == 1) { uplane = last }
-                    else { vplane = last }
-                }
-            }
-            else
-            {
-                if (i == 0) { yplane = last }
-                else if (i == 1) { uplane = last }
-                else { vplane = last }
-            }
+            yuv_planes = ArrayAdd(yuv_planes, last)
         }
     }
 
-    return CombinePlanes(yplane, uplane, vplane, planes="YUV", sample_clip=c)
+    return CombinePlanes(yuv_planes[0], yuv_planes[1], yuv_planes[2], planes="YUV", sample_clip=c)
 }
 
 Function BalanceTopBorder(clip c, int cTop, float thresh, int blur, int plane, bool clip_444, bool clip_420, string cloc)
