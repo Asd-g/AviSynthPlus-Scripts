@@ -103,6 +103,8 @@ BalanceBorders/bbmod([60,20,40], cleft=[40,20,10], thresh=[12,4,5], blur=[100,99
 
 ### Changelog ###
 #---------------
+# Fixed processing when the input has one plane.
+#---------------
 # Changed the behavior of cTop/cBottom/cLeft/cRight values when specified for chroma planes - previously the values were right bit shifted by the subsampling factor (for example, YUV 4:2:0 and cTop=[2,4] means 2px for chroma planes will be filtered - 4 >> 1 (chroma subsampling)); now the values are passed as specified.
 # Changed the required AviSynth+ version.
 #---------------
@@ -232,7 +234,7 @@ Function bb_process(clip c, int func_name, val "cTop", val "cBottom", val "cLeft
 
     source_planes = [y, u, v]
     num_planes = min(NumComponents(c), 3) - 1
-    plane_a = [ExtractY(c), ExtractU(c), ExtractV(c)]
+    plane_a = (num_planes == 0) ? [ExtractY(c)] : [ExtractY(c), ExtractU(c), ExtractV(c)]
     plane_error = ["(Y plane).", "(U plane).", "(V plane)."]
     ctop_crop = [BitLShift(ctop_a[0], 1), BitLShift(ctop_a[1], 1), BitLShift(ctop_a[2], 1)]
     cleft_crop = [BitLShift(cleft_a[0], 1), BitLShift(cleft_a[1], 1), BitLShift(cleft_a[2], 1)]
