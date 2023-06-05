@@ -18,7 +18,7 @@
 ###                     Deblock, Deblock_QED, DctFilter,
 ###                     EEDI2, SangNom2,
 ###                     GradFun3DBmod, GradFun3, AddGrainC,
-###                     Dither.
+###                     Dither (https://gitlab.com/uvz/AviSynthPlus-Plugins-Scripts/-/blob/master/plugins64%2B/dither.dll).
 ###
 ###
 ###
