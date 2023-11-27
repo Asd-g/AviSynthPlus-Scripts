@@ -120,6 +120,9 @@ Note - if AvsPmod is used and default s_image_file and e_image_file are used, th
 
 ### Changelog ###
 #---------------
+# 1.0.2
+# Check for frame property _PictType every processed frame instead  only the first one.
+#---------------
 # 1.0.1
 # Check for frame property _PictType only if check_type=true.
 # Allowed to save images only for one clip.
@@ -176,7 +179,6 @@ Function ComparisonGen(val c, string_array "image_file", val_array "frame_type",
         }
 
         Assert(PixelType(c[0]) == PixelType(c[i]), "ComparisonGen: clips must have same pixel type.")
-        Assert(propGetType(c[i], "_PictType") > 0, "ComparisonGen: clip " + String(i + 1) + " doesn't have frame property _PictType.")
     }
 
     if (fnum_ch == 1)
@@ -222,20 +224,13 @@ Function ComparisonGen(val c, string_array "image_file", val_array "frame_type",
 
     matrix = Default(matrix, "709=>rgb")
     pixel_type = Default(pixel_type, "RGBP")
-
     check_type = Default(!Defined(pframes_file) ? true : check_type, true)
-
-    if (check_type)
-    {
-        Assert(propGetType(c[0], "_PictType") > 0, "ComparisonGen: clip 1 doesn't have frame property _PictType.")
-    }
-
-    n = Default(n, 10)
-    offset_coef = Default(offset_coef, 0.05)
-    offset = Int(FrameCount(c[0]) * offset_coef)
 
     if (!Defined(pframes_file) || (Defined(pframes_file) && check_type))
     {
+        n = Default(n, 10)
+        offset_coef = Default(offset_coef, 0.05)
+        offset = Int(FrameCount(c[0]) * offset_coef)
         frames_file = (!Defined(pframes_file)) ? (RT_GetSystemEnv("temp") + "\" + "frames_file.txt") : pframes_file
         _filedir = RT_FilenameSplit(frames_file, 3)
 
@@ -246,7 +241,7 @@ Function ComparisonGen(val c, string_array "image_file", val_array "frame_type",
 
         for (i = 0, RT_FileQueryLines(frames_file) - 1)
         {
-            _fwsingle(_selectframes(c, Int(Value(RT_ReadTxtFromFile(frames_file, 1, i)))), _filedir, _types, i)
+            _fwsingle(_selectframes(c, Int(Value(RT_ReadTxtFromFile(frames_file, 1, i))), frames_file), _filedir, _types, i)
 
             if (Exist(_filedir + "_forsave.txt"))
             {
@@ -264,10 +259,11 @@ Function ComparisonGen(val c, string_array "image_file", val_array "frame_type",
                 if (!lastframe)
                 {
                     RT_FileDelete(_filedir + "_checkagain.txt")
-                    Assert(lastframe, "ComparisonGen: no frame number matching all frame types found.")
+                    RT_FileDelete(frames_file)
+                    Assert(false, "ComparisonGen: no frame number matching all frame types found.")
                 }
 
-                _fwsingle(_selectframes(c, Int(Value(RT_ReadTxtFromFile(_filedir + "_checkagain.txt", 1, 0)))), _filedir, _types, i)
+                _fwsingle(_selectframes(c, Int(Value(RT_ReadTxtFromFile(_filedir + "_checkagain.txt", 1, 0))), frames_file), _filedir, _types, i)
             }
 
             if (Exist(_filedir + "_forsave.txt"))
@@ -311,8 +307,17 @@ Function _fnw(int _framec, int n, int offset, string frames_file)
     }
 }
 
-Function _selectframes(val c, int framenum)
+Function _selectframes(val c, int framenum, string frames_file)
 {
+    for (i = 0, ArraySize(c) - 1)
+    {
+        if (propGetType(c[i], "_PictType", offset=framenum) == 0)
+        {
+            RT_FileDelete(frames_file)
+            Assert(false, "ComparisonGen: clip " + String(i + 1) + " frame " + String(framenum) + " doesn't have frame property _PictType.")
+        }
+    }
+
     return (ArraySize(c) == 1) ? [Trim(c[0], framenum, -1)] :
         \ (ArraySize(c) == 2) ? [Trim(c[0], framenum, -1), Trim(c[1], framenum, -1)] :
         \ (ArraySize(c) == 3) ? [Trim(c[0], framenum, -1), Trim(c[1], framenum, -1), Trim(c[2], framenum, -1)] :
