@@ -3,7 +3,7 @@
 
 /*
 Requirements:
-AviSynth+ 3.6+
+AviSynth+ 3.6 or later
 avsresize (for z_ resizer, avsresize >=r22), DPID (for dpid/dpidraw resizer)
 fmtconv (for fmtc_resample resizer)
 SSIM_downsample (for SSIM_downsample resizer)
@@ -88,7 +88,10 @@ AutoResize(720, resizer="z_BicubicResize", args="b=-0.25, c=0.125") # Assume 192
 
 ### Changelog ###
 #---------------
-# 1.0.1
+# 1.1.1
+# Fixed missing variable when mode array is used and no addition crop/shift is required.
+#---------------
+# 1.1.0
 # Added requirement for the avsresize version >=r22.
 # Removed parameter crop_values.
 # mode: can be array to resize to specific resolution without ar error (based on https://gist.github.com/wiwaz/7d5afee6aadb1dae0131aedc6d1a6440).
@@ -205,12 +208,12 @@ function AutoResize(clip c, val mode, int "left", int "top", int "right", int "b
     {
         if (interlaced)
         {
-            return (crop_values || mode_array) ? eval(resizer + "(c," + newsize + ", src_left=proc_left, src_top=proc_top, src_width=-proc_right, src_height=-proc_bottom, dither=dither_type, interlaced=true" + args + ")") :
+            return (crop_values || (mode_array && VarExist("proc_left"))) ? eval(resizer + "(c," + newsize + ", src_left=proc_left, src_top=proc_top, src_width=-proc_right, src_height=-proc_bottom, dither=dither_type, interlaced=true" + args + ")") :
             \ eval(resizer + "(c," + newsize + ", dither=dither_type, interlaced=true" + args + ")")
         }
         else
         {
-            return (crop_values || mode_array) ? eval(resizer + "(c," + newsize + ", src_left=proc_left, src_top=proc_top, src_width=-proc_right, src_height=-proc_bottom, dither=dither_type, interlaced=false" + args + ")") :
+            return (crop_values || (mode_array && VarExist("proc_left"))) ? eval(resizer + "(c," + newsize + ", src_left=proc_left, src_top=proc_top, src_width=-proc_right, src_height=-proc_bottom, dither=dither_type, interlaced=false" + args + ")") :
             \ eval(resizer + "(c," + newsize + ", dither=dither_type, interlaced=false" + args + ")")
         }
 
@@ -223,13 +226,13 @@ function AutoResize(clip c, val mode, int "left", int "top", int "right", int "b
 
             SeparateFields(c)
             newsize = LeftStr(newsize, FindStr(newsize, ",")) + String(RT_NumberValue(RightStr(newsize, StrLen(newsize) - FindStr(newsize, ","))) / 2)
-            (crop_values || mode_array) ? eval(resizer + "(" + newsize + ", sx=proc_left, sy=proc_top, sw=-proc_right, sh=-proc_bottom" + args + ")") :
+            (crop_values || (mode_array && VarExist("proc_left"))) ? eval(resizer + "(" + newsize + ", sx=proc_left, sy=proc_top, sw=-proc_right, sh=-proc_bottom" + args + ")") :
             \ eval(resizer + "(" + newsize + args + ")")
             Weave()
         }
         else
         {
-            (crop_values || mode_array) ? eval(resizer + "(c," + newsize + ", sx=proc_left, sy=proc_top, sw=-proc_right, sh=-proc_bottom, interlaced=0" + args + ")") :
+            (crop_values || (mode_array && VarExist("proc_left"))) ? eval(resizer + "(c," + newsize + ", sx=proc_left, sy=proc_top, sw=-proc_right, sh=-proc_bottom, interlaced=0" + args + ")") :
             \ eval(resizer + "(c, interlaced=0," + newsize + args + ")")
         }
 
@@ -254,12 +257,12 @@ function AutoResize(clip c, val mode, int "left", int "top", int "right", int "b
     }
     else if (resizer == "libplacebo_resample")
     {
-        return (crop_values || mode_array) ? eval(resizer + "(c," + newsize + ", sx=proc_left, sy=proc_top, src_width= Width(c)-proc_left-proc_right, src_height=Height(c)-proc_top-proc_bottom" + args + ")") :
+        return (crop_values || (mode_array && VarExist("proc_left"))) ? eval(resizer + "(c," + newsize + ", sx=proc_left, sy=proc_top, src_width= Width(c)-proc_left-proc_right, src_height=Height(c)-proc_top-proc_bottom" + args + ")") :
         \ eval(resizer + "(c," + newsize + args + ")")
     }
     else # internal avs resizers, ResampleMT resizers
     {
-        return (crop_values || mode_array) ? eval(resizer + "(c," + newsize + ", src_left=proc_left, src_top=proc_top, src_width=-proc_right, src_height=-proc_bottom" + args + ")") :
+        return (crop_values || (mode_array && VarExist("proc_left"))) ? eval(resizer + "(c," + newsize + ", src_left=proc_left, src_top=proc_top, src_width=-proc_right, src_height=-proc_bottom" + args + ")") :
         \ eval(resizer + "(c," + newsize + args + ")")
     }
 }
