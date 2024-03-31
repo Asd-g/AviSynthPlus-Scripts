@@ -1,4 +1,4 @@
-### A script for saving images from up to 5 clips.
+### A script for saving images.
 
 
 ### Requirements - AviSynth+ >= r3573, avsresize, RT_Stats.
@@ -6,13 +6,12 @@
 
 ### Usage ###
 ###
-# Function ComparisonGen(val c, string_array "image_file", val_array "frame_type", string "pframes_file", int "n", float "offset_coef", string "matrix", string "pixel_type", bool "check_type")
+# Function ComparisonGen(clip_array c, string_array "image_file", val_array "frame_type", string "pframes_file", int "n", float "offset_coef", string "matrix", string "pixel_type", bool "check_type")
 ###
 ## Parameters ##
 #---------------
 # c: Input clips.
 # Type of array.
-# Clips must be max 5.
 # If the clips have different length, the shortest length is used for all clips.
 #---------------
 # image_file (default ["%06d_0.png", "%06d_1.png", "%06d_2.png", "%06d_3.png", "%06d_4.png"]): The path+filename of the new saved images.
@@ -120,6 +119,9 @@ Note - if AvsPmod is used and default s_image_file and e_image_file are used, th
 
 ### Changelog ###
 #---------------
+# 1.0.3
+# Removed the limit number of the input clips.
+#---------------
 # 1.0.2
 # Check for frame property _PictType every processed frame instead  only the first one.
 #---------------
@@ -163,19 +165,26 @@ Note - if AvsPmod is used and default s_image_file and e_image_file are used, th
 # Initial version.
 
 
-Function ComparisonGen(val c, string_array "image_file", val_array "frame_type", string "pframes_file", int "n", float "offset_coef", string "matrix", string "pixel_type", bool "check_type")
+Function ComparisonGen(clip_array c, string_array "image_file", val_array "frame_type", string "pframes_file", int "n", float "offset_coef", string "matrix", string "pixel_type", bool "check_type")
 {
-    Assert(ArraySize(c) <= 5, "ComparisonGen: maximum 5 clips are supported.")
-
-    fnum = [FrameCount(c[0]), FrameCount(c[0]), FrameCount(c[0]), FrameCount(c[0]), FrameCount(c[0])]
-    fnum_ch = 0
-
-    for (i = 1, ArraySize(c) - 1)
+    frame_count0 = FrameCount(c[0])
+    fnum = [frame_count0]
+    c_size = ArraySize(c)
+    c_size_minus_1 = c_size - 1
+    frame_count_all = fnum
+    for (i = 1, c_size_minus_1)
     {
-        if (fnum[0] != FrameCount(c[i]))
+        fnum = ArrayAdd(fnum, frame_count0)
+        frame_count_all = ArrayAdd(frame_count_all, FrameCount(c[i]))
+    }
+
+    fnum_ch = 0
+    for (i = 1, c_size_minus_1)
+    {
+        if (fnum[0] != frame_count_all[i])
         {
             fnum_ch = 1
-            fnum = ArraySet(fnum, FrameCount(c[i]), i)
+            fnum = ArraySet(fnum, frame_count_all[i], i)
         }
 
         Assert(PixelType(c[0]) == PixelType(c[i]), "ComparisonGen: clips must have same pixel type.")
@@ -183,44 +192,67 @@ Function ComparisonGen(val c, string_array "image_file", val_array "frame_type",
 
     if (fnum_ch == 1)
     {
-        fnum = Min(fnum[0], fnum[1], fnum[2], fnum[3], fnum[4])
-
-        for (i = 0, ArraySize(c) - 1)
+        fnum_min = frame_count0
+        for (i = 1, c_size_minus_1)
         {
-            if (FrameCount(c[i]) != fnum)
+            fnum_min = Min(fnum_min, fnum[i])
+        }
+        for (i = 0, c_size_minus_1)
+        {
+            if (frame_count_all[i] != fnum_min)
             {
                 copy_clip = c[i]
-                c = ArraySet(c, Trim(copy_clip, 0, fnum - 1), i)
+                c = ArraySet(c, Trim(copy_clip, 0, fnum_min - 1), i)
             }
         }
+        frame_count0 = fnum_min
     }
 
     if (Defined(image_file))
     {
-        Assert(ArraySize(c) == ArraySize(image_file), "ComparisonGen: more or less 'image_file' given than there are clips.")
+        Assert(c_size == ArraySize(image_file), "ComparisonGen: more or less 'image_file' given than there are clips.")
+        _image = image_file
     }
-
-    _image = Default(image_file, (ArraySize(c) == 1) ? ["%06d_0.png"] :
-    \ (ArraySize(c) == 2) ? ["%06d_0.png", "%06d_1.png"] :
-    \ (ArraySize(c) == 3) ? ["%06d_0.png", "%06d_1.png", "%06d_2.png"] :
-    \  (ArraySize(c) == 4) ? ["%06d_0.png", "%06d_1.png", "%06d_2.png", "%06d_3.png"] :
-    \ ["%06d_0.png", "%06d_1.png", "%06d_2.png", "%06d_3.png", "%06d_4.png"])
+    else
+    {
+        _image = []
+        for (i = 0, c_size_minus_1)
+        {
+            _image = ArrayAdd(_image, "%06d_" + String(i) + ".png")
+        }
+    }
 
     if (Defined(frame_type))
     {
         Assert(ArraySize(c) == ArraySize(frame_type), "ComparisonGen: more or less 'frame_type' given than there are clips.")
-
         for (i = 0, ArraySize(frame_type) - 1)
         {
             Assert((IsInt(frame_type[i]) && frame_type[i] > 0 && frame_type[i] <= 4) || (IsString(frame_type[i]) && lcase(frame_type[i]) == "i") || (IsString(frame_type[i]) && lcase(frame_type[i]) == "p") || (IsString(frame_type[i]) && lcase(frame_type[i]) == "b") || (IsString(frame_type[i]) && lcase(frame_type[i]) == "pb"), """ComparisonGen: 'frame_type' values must be between 1..4 or "I", "P", "B", "PB".""")
         }
-    }
 
-    _types = Default(frame_type, (ArraySize(c) == 1) ? [4] :
-    \ (ArraySize(c) == 2) ? [4, 3] :
-    \ (ArraySize(c) == 3) ? [4, 3, 3] :
-    \ (ArraySize(c) == 4) ? [4, 3, 3, 3] :
-    \ [4, 3, 3, 3, 3])
+        if (IsInt(frame_type[0]))
+        {
+            frame_types_string = []
+            for (i = 0, c_size_minus_1)
+            {
+                frame_types_string = ArrayAdd(frame_types_string, Select(frame_type[i], "", "I", "P", "B", "PB"))
+            }
+
+            _types = frame_types_string
+        }
+        else
+        {
+            _types = frame_type
+        }
+    }
+    else
+    {
+        _types = ["PB"]
+        for (i = 1, c_size_minus_1)
+        {
+            _types = ArrayAdd(_types, "B")
+        }
+    }
 
     matrix = Default(matrix, "709=>rgb")
     pixel_type = Default(pixel_type, "RGBP")
@@ -230,13 +262,13 @@ Function ComparisonGen(val c, string_array "image_file", val_array "frame_type",
     {
         n = Default(n, 10)
         offset_coef = Default(offset_coef, 0.05)
-        offset = Int(FrameCount(c[0]) * offset_coef)
+        offset = Int(frame_count0 * offset_coef)
         frames_file = (!Defined(pframes_file)) ? (RT_GetSystemEnv("temp") + "\" + "frames_file.txt") : pframes_file
         _filedir = RT_FilenameSplit(frames_file, 3)
 
         if (!Defined(pframes_file))
         {
-            _fnw(FrameCount(c[0]), n, offset, frames_file)
+            _fnw(frame_count0, n, offset, frames_file)
         }
 
         for (i = 0, RT_FileQueryLines(frames_file) - 1)
@@ -255,7 +287,7 @@ Function ComparisonGen(val c, string_array "image_file", val_array "frame_type",
                 RT_WriteFile(_filedir + "_checkagain.txt", "%i", _checktemp + 1)
                 RT_FileDelete(_filedir + "_notmatiching.txt")
 
-                lastframe = Int(Value(RT_ReadTxtFromFile(_filedir + "_checkagain.txt", 1, 0))) <= FrameCount(c[0]) - 1
+                lastframe = Int(Value(RT_ReadTxtFromFile(_filedir + "_checkagain.txt", 1, 0))) <= frame_count0 - 1
                 if (!lastframe)
                 {
                     RT_FileDelete(_filedir + "_checkagain.txt")
@@ -278,14 +310,14 @@ Function ComparisonGen(val c, string_array "image_file", val_array "frame_type",
     _ffs = (check_type) ? _filedir + "_frames_for_save.txt" : pframes_file
 
     if (IsRGB(c[0])) {
-        for (i = 0, ArraySize(c) - 1)
+        for (i = 0, c_size_minus_1)
         {
             _simage(z_ConvertFormat(FrameSel(c[i], cmd=_ffs), pixel_type=pixel_type, dither_type="error_diffusion"), _image[i])
         }
     }
     else
     {
-        for (i = 0, ArraySize(c) - 1)
+        for (i = 0, c_size_minus_1)
         {
             _simage(z_ConvertFormat(FrameSel(c[i], cmd=_ffs), pixel_type=pixel_type, colorspace_op=matrix, resample_filter_uv="spline36", dither_type="error_diffusion"), _image[i])
         }
@@ -307,9 +339,10 @@ Function _fnw(int _framec, int n, int offset, string frames_file)
     }
 }
 
-Function _selectframes(val c, int framenum, string frames_file)
+Function _selectframes(clip_array c, int framenum, string frames_file)
 {
-    for (i = 0, ArraySize(c) - 1)
+    c_size_minus_1 = ArraySize(c) - 1
+    for (i = 0, c_size_minus_1)
     {
         if (propGetType(c[i], "_PictType", offset=framenum) == 0)
         {
@@ -318,33 +351,37 @@ Function _selectframes(val c, int framenum, string frames_file)
         }
     }
 
-    return (ArraySize(c) == 1) ? [Trim(c[0], framenum, -1)] :
-        \ (ArraySize(c) == 2) ? [Trim(c[0], framenum, -1), Trim(c[1], framenum, -1)] :
-        \ (ArraySize(c) == 3) ? [Trim(c[0], framenum, -1), Trim(c[1], framenum, -1), Trim(c[2], framenum, -1)] :
-        \ (ArraySize(c) == 4) ? [Trim(c[0], framenum, -1), Trim(c[1], framenum, -1), Trim(c[2], framenum, -1), Trim(c[3], framenum, -1)] :
-        \ [Trim(c[0], framenum, -1), Trim(c[1], framenum, -1), Trim(c[2], framenum, -1), Trim(c[3], framenum, -1), Trim(c[4], framenum, -1)]
+    new_clip_size = []
+    for (i = 0, c_size_minus_1)
+    {
+        new_clip_size = ArrayAdd(new_clip_size, Trim(c[i], framenum, -1))
+    }
+
+    return new_clip_size
 }
 
-Function _fwsingle(val c, string _filedir, val frame_types, int _framen)
+Function _fwsingle(clip_array c, string _filedir, string_array frame_types, int _framen)
 {
-    ScriptClip(c[0], function [c, _filedir, frame_types, _framen] ()
+    c_size = ArraySize(c)
+    c_size_minus_1 = c_size - 1
+    ScriptClip(c[0], function [c, _filedir, frame_types, _framen, c_size_minus_1] ()
         {
-            sI = (((IsInt(frame_types[0]) && frame_types[0] == 1) || (IsString(frame_types[0]) && lcase(frame_types[0]) == "i")) && (String(propGetString("_PictType")) == "I")) ? true : false
-            sP = (((IsInt(frame_types[0]) && frame_types[0] == 2) || (IsString(frame_types[0]) && lcase(frame_types[0]) == "p")) && (String(propGetString("_PictType")) == "P")) ? true : false
-            sB = (((IsInt(frame_types[0]) && frame_types[0] == 3) || (IsString(frame_types[0]) && lcase(frame_types[0]) == "b")) && (String(propGetString("_PictType")) == "B")) ? true : false
-            sPB = (((IsInt(frame_types[0]) && frame_types[0] == 4) || (IsString(frame_types[0]) && lcase(frame_types[0]) == "pb")) && (String(propGetString("_PictType")) == "P" || String(propGetString("_PictType")) == "B")) ? true : false
+            sI = (lcase(frame_types[0]) == "i" && propGetString("_PictType") == "I") ? true : false
+            sP = (lcase(frame_types[0]) == "p" && propGetString("_PictType") == "P") ? true : false
+            sB = (lcase(frame_types[0]) == "b" && propGetString("_PictType") == "B") ? true : false
+            sPB = (lcase(frame_types[0]) == "pb" && (propGetString("_PictType") == "P" || propGetString("_PictType") == "B")) ? true : false
 
             if (sI || sP || sB || sPB)
             {
                 check = 1
 
-                for (j = 1, ArraySize(c) - 1)
+                for (j = 1, c_size_minus_1)
                 {
                     c[j]
-                    eI = (((IsInt(frame_types[j]) && frame_types[j] == 1) || (IsString(frame_types[j]) && lcase(frame_types[j]) == "i")) && (String(propGetString("_PictType")) == "I")) ? true : false
-                    eP = (((IsInt(frame_types[j]) && frame_types[j] == 2) || (IsString(frame_types[j]) && lcase(frame_types[j]) == "p")) && (String(propGetString("_PictType")) == "P")) ? true : false
-                    eB = (((IsInt(frame_types[j]) && frame_types[j] == 3) || (IsString(frame_types[j]) && lcase(frame_types[j]) == "b")) && (String(propGetString("_PictType")) == "B")) ? true : false
-                    ePB = (((IsInt(frame_types[j]) && frame_types[j] == 4) || (IsString(frame_types[j]) && lcase(frame_types[j]) == "pb")) && (String(propGetString("_PictType")) == "P" || String(propGetString("_PictType")) == "B")) ? true : false
+                    eI = (lcase(frame_types[j]) == "i" && propGetString("_PictType") == "I") ? true : false
+                    eP = (lcase(frame_types[j]) == "p" && propGetString("_PictType") == "P") ? true : false
+                    eB = (lcase(frame_types[j]) == "b" && propGetString("_PictType") == "B") ? true : false
+                    ePB = (lcase(frame_types[j]) == "pb" && (propGetString("_PictType") == "P" || propGetString("_PictType") == "B")) ? true : false
 
                     if (eI || eP || eB || ePB)
                     {
@@ -352,7 +389,13 @@ Function _fwsingle(val c, string _filedir, val frame_types, int _framen)
                     }
                 }
 
-                if (ArraySize(c) == 1 || (check == 2 && ArraySize(c) == 2) || (check == 4 && ArraySize(c) == 3) || (check == 7 && ArraySize(c) == 4) || (check == 11 && ArraySize(c) == 5))
+                result = 1
+                for (i = 1, c_size_minus_1)
+                {
+                    result = result + i
+                }
+
+                if (result == check)
                 {
                     RT_WriteFile(_filedir + "_forsave.txt", "%i", _framen)
                 }
