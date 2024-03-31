@@ -119,6 +119,9 @@ Note - if AvsPmod is used and default s_image_file and e_image_file are used, th
 
 ### Changelog ###
 #---------------
+# 1.0.4
+# Moved a loop block from scriptclip.
+#---------------
 # 1.0.3
 # Removed the limit number of the input clips.
 #---------------
@@ -364,7 +367,14 @@ Function _fwsingle(clip_array c, string _filedir, string_array frame_types, int 
 {
     c_size = ArraySize(c)
     c_size_minus_1 = c_size - 1
-    ScriptClip(c[0], function [c, _filedir, frame_types, _framen, c_size_minus_1] ()
+
+    result = 1
+    for (i = 1, c_size_minus_1)
+    {
+        result = result + i
+    }
+
+    ScriptClip(c[0], function [c, _filedir, frame_types, _framen, c_size_minus_1, result] ()
         {
             sI = (lcase(frame_types[0]) == "i" && propGetString("_PictType") == "I") ? true : false
             sP = (lcase(frame_types[0]) == "p" && propGetString("_PictType") == "P") ? true : false
@@ -387,12 +397,6 @@ Function _fwsingle(clip_array c, string _filedir, string_array frame_types, int 
                     {
                         check = check + j
                     }
-                }
-
-                result = 1
-                for (i = 1, c_size_minus_1)
-                {
-                    result = result + i
                 }
 
                 if (result == check)
