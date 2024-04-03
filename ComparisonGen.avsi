@@ -119,6 +119,9 @@ Note - if AvsPmod is used and default s_image_file and e_image_file are used, th
 
 ### Changelog ###
 #---------------
+# 1.0.5
+# Removed redundant ScriptClip call.
+#---------------
 # 1.0.4
 # Moved a loop block from scriptclip.
 #---------------
@@ -276,7 +279,7 @@ Function ComparisonGen(clip_array c, string_array "image_file", val_array "frame
 
         for (i = 0, RT_FileQueryLines(frames_file) - 1)
         {
-            _fwsingle(_selectframes(c, Int(Value(RT_ReadTxtFromFile(frames_file, 1, i))), frames_file), _filedir, _types, i)
+           _fwsingle(_selectframes(c, Int(Value(RT_ReadTxtFromFile(frames_file, 1, i))), frames_file), _filedir, _types, i)
 
             if (Exist(_filedir + "_forsave.txt"))
             {
@@ -374,47 +377,44 @@ Function _fwsingle(clip_array c, string _filedir, string_array frame_types, int 
         result = result + i
     }
 
-    ScriptClip(c[0], function [c, _filedir, frame_types, _framen, c_size_minus_1, result] ()
+    c[0]
+    sI = (lcase(frame_types[0]) == "i" && propGetString("_PictType") == "I") ? true : false
+    sP = (lcase(frame_types[0]) == "p" && propGetString("_PictType") == "P") ? true : false
+    sB = (lcase(frame_types[0]) == "b" && propGetString("_PictType") == "B") ? true : false
+    sPB = (lcase(frame_types[0]) == "pb" && (propGetString("_PictType") == "P" || propGetString("_PictType") == "B")) ? true : false
+
+    if (sI || sP || sB || sPB)
+    {
+        check = 1
+
+        for (j = 1, c_size_minus_1)
         {
-            sI = (lcase(frame_types[0]) == "i" && propGetString("_PictType") == "I") ? true : false
-            sP = (lcase(frame_types[0]) == "p" && propGetString("_PictType") == "P") ? true : false
-            sB = (lcase(frame_types[0]) == "b" && propGetString("_PictType") == "B") ? true : false
-            sPB = (lcase(frame_types[0]) == "pb" && (propGetString("_PictType") == "P" || propGetString("_PictType") == "B")) ? true : false
+            c[j]
+            eI = (lcase(frame_types[j]) == "i" && propGetString("_PictType") == "I") ? true : false
+            eP = (lcase(frame_types[j]) == "p" && propGetString("_PictType") == "P") ? true : false
+            eB = (lcase(frame_types[j]) == "b" && propGetString("_PictType") == "B") ? true : false
+            ePB = (lcase(frame_types[j]) == "pb" && (propGetString("_PictType") == "P" || propGetString("_PictType") == "B")) ? true : false
 
-            if (sI || sP || sB || sPB)
+            if (eI || eP || eB || ePB)
             {
-                check = 1
-
-                for (j = 1, c_size_minus_1)
-                {
-                    c[j]
-                    eI = (lcase(frame_types[j]) == "i" && propGetString("_PictType") == "I") ? true : false
-                    eP = (lcase(frame_types[j]) == "p" && propGetString("_PictType") == "P") ? true : false
-                    eB = (lcase(frame_types[j]) == "b" && propGetString("_PictType") == "B") ? true : false
-                    ePB = (lcase(frame_types[j]) == "pb" && (propGetString("_PictType") == "P" || propGetString("_PictType") == "B")) ? true : false
-
-                    if (eI || eP || eB || ePB)
-                    {
-                        check = check + j
-                    }
-                }
-
-                if (result == check)
-                {
-                    RT_WriteFile(_filedir + "_forsave.txt", "%i", _framen)
-                }
-                else
-                {
-                    RT_WriteFile(_filedir + "_notmatiching.txt", "%i", _framen)
-                }
+                check = check + j
             }
-            else
-            {
-                RT_WriteFile(_filedir + "_notmatiching.txt", "%i", _framen)
-            }
-        }, after_frame=true)
+        }
 
-    RT_AverageLuma(n=_framen, w=1, h=1)
+        if (result == check)
+        {
+            RT_WriteFile(_filedir + "_forsave.txt", "%i", _framen)
+
+        }
+        else
+        {
+            RT_WriteFile(_filedir + "_notmatiching.txt", "%i", _framen)
+        }
+    }
+    else
+    {
+        RT_WriteFile(_filedir + "_notmatiching.txt", "%i", _framen)
+    }
 }
 
 function _simage (clip s, string image_file)
