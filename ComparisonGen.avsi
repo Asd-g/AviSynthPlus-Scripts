@@ -21,11 +21,12 @@
 # frame_type (default [4, 3, 3, 3, 3]): Frame types that will be saved.
 # Type of array.
 # It must have the same length as 'c'.
-# The values must be between 1..4 or "I", "P", "B", "PB".
+# The values must be between 1..5 or "I", "P", "B", "PB", "IPB".
 # 1: Corresponds to "I" frame.
 # 2: Corresponds to "P" frame.
 # 3: Corresponds to "B" frame.
 # 4: Corresponds to either "P" or "B" frame ("PB").
+# 5: Corresponds to "I" or "P", or "B" frame ("IPB").
 # This parameter does nothing when check_type=false.
 #---------------
 # pframes_file: The path+filename of the file containing the frames that will be saved as images.
@@ -118,6 +119,11 @@ Note - if AvsPmod is used and default s_image_file and e_image_file are used, th
 
 
 ### Changelog ###
+#---------------
+# 1.0.6
+# Added frame_type="IPB"/5.
+# Removed redundant frame_type case checks.
+# Fixed overlapped frames.
 #---------------
 # 1.0.5
 # Removed redundant ScriptClip call.
@@ -233,7 +239,7 @@ Function ComparisonGen(clip_array c, string_array "image_file", val_array "frame
         Assert(ArraySize(c) == ArraySize(frame_type), "ComparisonGen: more or less 'frame_type' given than there are clips.")
         for (i = 0, ArraySize(frame_type) - 1)
         {
-            Assert((IsInt(frame_type[i]) && frame_type[i] > 0 && frame_type[i] <= 4) || (IsString(frame_type[i]) && lcase(frame_type[i]) == "i") || (IsString(frame_type[i]) && lcase(frame_type[i]) == "p") || (IsString(frame_type[i]) && lcase(frame_type[i]) == "b") || (IsString(frame_type[i]) && lcase(frame_type[i]) == "pb"), """ComparisonGen: 'frame_type' values must be between 1..4 or "I", "P", "B", "PB".""")
+            Assert((IsInt(frame_type[i]) && frame_type[i] > 0 && frame_type[i] <= 5) || (IsString(frame_type[i]) && frame_type[i] == "I") || (IsString(frame_type[i]) && frame_type[i] == "P") || (IsString(frame_type[i]) && frame_type[i] == "B") || (IsString(frame_type[i]) && frame_type[i] == "PB") || (IsString(frame_type[i]) && frame_type[i] == "IPB"), """ComparisonGen: 'frame_type' values must be between 1..5 or "I", "P", "B", "PB", "IPB".""")
         }
 
         if (IsInt(frame_type[0]))
@@ -241,7 +247,7 @@ Function ComparisonGen(clip_array c, string_array "image_file", val_array "frame
             frame_types_string = []
             for (i = 0, c_size_minus_1)
             {
-                frame_types_string = ArrayAdd(frame_types_string, Select(frame_type[i], "", "I", "P", "B", "PB"))
+                frame_types_string = ArrayAdd(frame_types_string, Select(frame_type[i], "", "I", "P", "B", "PB", "IPB"))
             }
 
             _types = frame_types_string
@@ -271,25 +277,59 @@ Function ComparisonGen(clip_array c, string_array "image_file", val_array "frame
         offset = Int(frame_count0 * offset_coef)
         frames_file = (!Defined(pframes_file)) ? (RT_GetSystemEnv("temp") + "\" + "frames_file.txt") : pframes_file
         _filedir = RT_FilenameSplit(frames_file, 3)
+        if (Exist(_filedir + "_notmatiching.txt"))
+        {
+            RT_FileDelete(_filedir + "_notmatiching.txt")
+        }
+        if (Exist(_filedir + "_frames_for_save.txt"))
+        {
+            RT_FileDelete(_filedir + "_frames_for_save.txt")
+        }
+        if (Exist(_filedir + "_forsave.txt"))
+        {
+            RT_FileDelete(_filedir + "_forsave.txt")
+        }
+        if (Exist(_filedir + "_checkagain.txt"))
+        {
+            RT_FileDelete(_filedir + "_checkagain.txt")
+        }
 
         if (!Defined(pframes_file))
         {
             _fnw(frame_count0, n, offset, frames_file)
         }
 
+        last_saved_frame = 0
+
         for (i = 0, RT_FileQueryLines(frames_file) - 1)
         {
-           _fwsingle(_selectframes(c, Int(Value(RT_ReadTxtFromFile(frames_file, 1, i))), frames_file), _filedir, _types, i)
+            checked_frame = Int(Value(RT_ReadTxtFromFile(frames_file, 1, i)))
+            _fwsingle(_selectframes(c, checked_frame, frames_file), _filedir, _types, i)
+
+            if (i > 0)
+            {
+                last_saved_frame = Int(Value(RT_ReadTxtFromFile(_filedir + "_frames_for_save.txt", 1, i - 1)))
+            }
+            if (checked_frame <= last_saved_frame)
+            {
+                if (Exist(_filedir + "_notmatiching.txt"))
+                {
+                    RT_FileDelete(_filedir + "_notmatiching.txt")
+                }
+
+                checked_frame = last_saved_frame + 1
+                _fwsingle(_selectframes(c, checked_frame, frames_file), _filedir, _types, i)
+            }
 
             if (Exist(_filedir + "_forsave.txt"))
             {
-                RT_WriteFile(_filedir + "_frames_for_save.txt", "%i", Int(Value(RT_ReadTxtFromFile(frames_file, 1, i))), append=true)
+                RT_WriteFile(_filedir + "_frames_for_save.txt", "%i", checked_frame, append=true)
                 RT_FileDelete(_filedir + "_forsave.txt")
             }
 
             While (Exist(_filedir + "_notmatiching.txt"))
             {
-                _checktemp = (!Exist(_filedir + "_checkagain.txt")) ? Int(Value(RT_ReadTxtFromFile(frames_file, 1, i))) : Int(Value(RT_ReadTxtFromFile(_filedir + "_checkagain.txt", 1, 0)))
+                _checktemp = (!Exist(_filedir + "_checkagain.txt")) ? checked_frame : Int(Value(RT_ReadTxtFromFile(_filedir + "_checkagain.txt", 1, 0)))
                 RT_WriteFile(_filedir + "_checkagain.txt", "%i", _checktemp + 1)
                 RT_FileDelete(_filedir + "_notmatiching.txt")
 
@@ -368,8 +408,7 @@ Function _selectframes(clip_array c, int framenum, string frames_file)
 
 Function _fwsingle(clip_array c, string _filedir, string_array frame_types, int _framen)
 {
-    c_size = ArraySize(c)
-    c_size_minus_1 = c_size - 1
+    c_size_minus_1 = ArraySize(c) - 1
 
     result = 1
     for (i = 1, c_size_minus_1)
@@ -378,24 +417,26 @@ Function _fwsingle(clip_array c, string _filedir, string_array frame_types, int 
     }
 
     c[0]
-    sI = (lcase(frame_types[0]) == "i" && propGetString("_PictType") == "I") ? true : false
-    sP = (lcase(frame_types[0]) == "p" && propGetString("_PictType") == "P") ? true : false
-    sB = (lcase(frame_types[0]) == "b" && propGetString("_PictType") == "B") ? true : false
-    sPB = (lcase(frame_types[0]) == "pb" && (propGetString("_PictType") == "P" || propGetString("_PictType") == "B")) ? true : false
+    sI = (frame_types[0] == "I" && propGetString("_PictType") == "I")
+    sP = (frame_types[0] == "P" && propGetString("_PictType") == "P")
+    sB = (frame_types[0] == "B" && propGetString("_PictType") == "B")
+    sPB = (frame_types[0] == "PB" && (propGetString("_PictType") == "P" || propGetString("_PictType") == "B"))
+    sIPB = (frame_types[0] == "IPB")
 
-    if (sI || sP || sB || sPB)
+    if (sI || sP || sB || sPB || sIPB)
     {
         check = 1
 
         for (j = 1, c_size_minus_1)
         {
             c[j]
-            eI = (lcase(frame_types[j]) == "i" && propGetString("_PictType") == "I") ? true : false
-            eP = (lcase(frame_types[j]) == "p" && propGetString("_PictType") == "P") ? true : false
-            eB = (lcase(frame_types[j]) == "b" && propGetString("_PictType") == "B") ? true : false
-            ePB = (lcase(frame_types[j]) == "pb" && (propGetString("_PictType") == "P" || propGetString("_PictType") == "B")) ? true : false
+            eI = (frame_types[j] == "I" && propGetString("_PictType") == "I")
+            eP = (frame_types[j] == "P" && propGetString("_PictType") == "P")
+            eB = (frame_types[j] == "B" && propGetString("_PictType") == "B")
+            ePB = (frame_types[j] == "PB" && (propGetString("_PictType") == "P" || propGetString("_PictType") == "B"))
+            eIPB = (frame_types[j] == "IPB")
 
-            if (eI || eP || eB || ePB)
+            if (eI || eP || eB || ePB || eIPB)
             {
                 check = check + j
             }
@@ -404,7 +445,6 @@ Function _fwsingle(clip_array c, string _filedir, string_array frame_types, int 
         if (result == check)
         {
             RT_WriteFile(_filedir + "_forsave.txt", "%i", _framen)
-
         }
         else
         {
