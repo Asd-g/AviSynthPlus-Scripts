@@ -9,7 +9,7 @@ Reference - https://ieeexplore.ieee.org/document/9508136
 
 ### Usage ###
 ###
-# Function HDR10_Content_Metadata(clip c, string "log_path", bool "MaxCLL", bool "MaxFALL", float "MaxCLL_percentile", float "MaxFALL_percentile")
+# Function HDR10_Content_Metadata(clip c, string "log_path", bool "MaxCLL", bool "MaxFALL", float "MaxCLL_percentile", float "MaxFALL_percentile", string "temp_files_suffix")
 ###
 ## Parameters ##
 #---------------
@@ -25,9 +25,19 @@ Reference - https://ieeexplore.ieee.org/document/9508136
 # MaxFALL (default: true): Whether to calculate MaxFALL.
 #---------------
 # MaxCLL_percentile (default: 99.5): Compute percentile of the frame's max brightness.
+# Must be between 0.0..100.0.
 #---------------
 # MaxFALL_percentile (default: 99.75): Compute percentile of the frame's max brightness.
+# Must be between 0.0..100.0.
+#---------------
+# temp_files_suffix (default: not specified): Whether to add suffix to the temporary files.
+# This will allow to run instances simultaneously.
 
+
+### Temporary files ###
+/*
+In order to save some intermediate results, temporary file(s) is created in the same location as log_path. At the end of the analysis this file(s) is deleted.
+*/
 
 
 ### How to use ###
@@ -45,11 +55,15 @@ Note - in this case if default "log_path" is used, the log will be saved in the 
 
 ### Changelog ###
 #---------------
+# 1.0.1
+# Actually give error message if MaxCLL_percentile / MaxCLL_percentile aren't between 0.0..100.0.
+# Added parameter temp_files_suffix - allows multi instances simultaneously.
+#---------------
 # 1.0.0
 # Initial version.
 
 
-Function HDR10_Content_Metadata(clip c, string "log_path", bool "MaxCLL", bool "MaxFALL", float "MaxCLL_percentile", float "MaxFALL_percentile")
+Function HDR10_Content_Metadata(clip c, string "log_path", bool "MaxCLL", bool "MaxFALL", float "MaxCLL_percentile", float "MaxFALL_percentile", string "temp_files_suffix")
 {
     Assert(Is420(c), "HDR10_Content_Metadata: the clip must be in YUV420 format.")
     Assert(propGetInt(c, "_Transfer") == 16, "HDR10_Content_Metadata: the clip must have _Transfer frame property 16.")
@@ -60,9 +74,10 @@ Function HDR10_Content_Metadata(clip c, string "log_path", bool "MaxCLL", bool "
     maxfall = Default(MaxFALL, true)
     maxcll_percentile = Default(MaxCLL_percentile, 99.5)
     maxfall_percentile = Default(MaxFALL_percentile, 99.75)
+    temp_files_suffix = Default(temp_files_suffix, "")
 
-    Assert(MaxCLL_percentile >= 0.0 || MaxCLL_percentile <= 1.0, "HDR10_Content_Metadata: MaxCLL_percentile must be between 0.0..1.0.")
-    Assert(MaxFALL_percentile >= 0.0 || MaxFALL_percentile <= 1.0, "HDR10_Content_Metadata: MaxFALL_percentile must be between 0.0..1.0.")
+    Assert(MaxCLL_percentile >= 0.0 && MaxCLL_percentile <= 100.0, "HDR10_Content_Metadata: MaxCLL_percentile must be between 0.0..100.0.")
+    Assert(MaxFALL_percentile >= 0.0 && MaxFALL_percentile <= 100.0, "HDR10_Content_Metadata: MaxFALL_percentile must be between 0.0..100.0.")
 
     c
     frames_count_minus_1 = FrameCount(c)
@@ -73,14 +88,14 @@ Function HDR10_Content_Metadata(clip c, string "log_path", bool "MaxCLL", bool "
     {
         current_frame = 0
 
-        pass1_file = log_path + "pass1.txt"
+        pass1_avg_file = log_path + "pass1_avg" + temp_files_suffix + ".txt"
         rmax = RplaneMax()
         gmax = GplaneMax()
         bmax = BplaneMax()
         max_rgb = (rmax >= Max(gmax, bmax)) ? 1
             \ : (gmax >= Max(rmax, bmax)) ? 2
             \ : 3
-        RT_WriteFile(pass1_file, "%s", String((max_rgb < 3) ? (max_rgb < 2) ? AverageR() : AverageG() : AverageB()))
+        RT_WriteFile(pass1_avg_file, "%s", String((max_rgb < 3) ? (max_rgb < 2) ? AverageR() : AverageG() : AverageB()))
 
         for (i = 1, frames_count_minus_1)
         {
@@ -92,11 +107,11 @@ Function HDR10_Content_Metadata(clip c, string "log_path", bool "MaxCLL", bool "
             max_rgb = (rmax >= Max(gmax, bmax)) ? 1
                 \ : (gmax >= Max(rmax, bmax)) ? 2
                 \ : 3
-            RT_WriteFile(pass1_file, "%s", String((max_rgb < 3) ? (max_rgb < 2) ? AverageR() : AverageG() : AverageB()), append=true)
+            RT_WriteFile(pass1_avg_file, "%s", String((max_rgb < 3) ? (max_rgb < 2) ? AverageR() : AverageG() : AverageB()), append=true)
         }
 
-        pass1 = RT_ReadTxtFromFile(pass1_file)
-        RT_FileDelete(pass1_file)
+        pass1 = RT_ReadTxtFromFile(pass1_avg_file)
+        RT_FileDelete(pass1_avg_file)
         sorted_pass = RT_TxtSort(pass1)
         max_avg = RT_TxtGetLine(sorted_pass, (maxfall_percentile < 100.0) ? RoundHalfToEven((maxfall_percentile / 100.0) * (RT_TxtQueryLines(sorted_pass) - 1))
             \ : RT_TxtQueryLines(sorted_pass) - 1)
@@ -110,17 +125,17 @@ Function HDR10_Content_Metadata(clip c, string "log_path", bool "MaxCLL", bool "
 
         current_frame = 0
 
-        pass1_file = log_path + "pass1.txt"
-        RT_WriteFile(pass1_file, "%s", String(Max(RplaneMax(threshold=threshold_), GplaneMax(threshold=threshold_), BplaneMax(threshold=threshold_))))
+        pass1_max_file = log_path + "pass1_max" + temp_files_suffix + ".txt"
+        RT_WriteFile(pass1_max_file, "%s", String(Max(RplaneMax(threshold=threshold_), GplaneMax(threshold=threshold_), BplaneMax(threshold=threshold_))))
 
         for (i = 1, frames_count_minus_1)
         {
             current_frame = i
-            RT_WriteFile(pass1_file, "%s", String(Max(RplaneMax(threshold=threshold_), GplaneMax(threshold=threshold_), BplaneMax(threshold=threshold_))), append=true)
+            RT_WriteFile(pass1_max_file, "%s", String(Max(RplaneMax(threshold=threshold_), GplaneMax(threshold=threshold_), BplaneMax(threshold=threshold_))), append=true)
         }
 
-        pass1 = RT_ReadTxtFromFile(pass1_file)
-        RT_FileDelete(pass1_file)
+        pass1 = RT_ReadTxtFromFile(pass1_max_file)
+        RT_FileDelete(pass1_max_file)
         sorted_pass = RT_TxtSort(pass1)
         max_ = RT_TxtGetLine(sorted_pass, (!maxcll_percentile_100) ? RoundHalfToEven((maxcll_percentile / 100.0) * (RT_TxtQueryLines(sorted_pass) - 1))
             \ : RT_TxtQueryLines(sorted_pass) - 1)
@@ -134,8 +149,8 @@ Function HDR10_Content_Metadata(clip c, string "log_path", bool "MaxCLL", bool "
 
         current_frame = 0
 
-        pass1_avg_file = log_path + "pass1_avg.txt"
-        pass1_max_file = log_path + "pass1_max.txt"
+        pass1_avg_file = log_path + "pass1_avg" + temp_files_suffix + ".txt"
+        pass1_max_file = log_path + "pass1_max" + temp_files_suffix + ".txt"
 
         rmax = RplaneMax()
         gmax = GplaneMax()
