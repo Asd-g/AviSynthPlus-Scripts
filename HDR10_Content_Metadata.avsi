@@ -35,9 +35,9 @@ Reference - https://ieeexplore.ieee.org/document/9508136
 
 
 ### Temporary files ###
-/*
-In order to save some intermediate results, temporary file(s) is created in the same location as log_path. At the end of the analysis this file(s) is deleted.
-*/
+###
+# In order to save some intermediate results, temporary file(s) is created in the same location as log_path. At the end of the analysis this file(s) is deleted.
+###
 
 
 ### How to use ###
@@ -54,6 +54,9 @@ Note - in this case if default "log_path" is used, the log will be saved in the 
 
 
 ### Changelog ###
+#---------------
+# 1.0.2
+# Removed repeating code.
 #---------------
 # 1.0.1
 # Actually give error message if MaxCLL_percentile / MaxCLL_percentile aren't between 0.0..100.0.
@@ -89,15 +92,12 @@ Function HDR10_Content_Metadata(clip c, string "log_path", bool "MaxCLL", bool "
         current_frame = 0
 
         pass1_avg_file = log_path + "pass1_avg" + temp_files_suffix + ".txt"
-        rmax = RplaneMax()
-        gmax = GplaneMax()
-        bmax = BplaneMax()
-        max_rgb = (rmax >= Max(gmax, bmax)) ? 1
-            \ : (gmax >= Max(rmax, bmax)) ? 2
-            \ : 3
-        RT_WriteFile(pass1_avg_file, "%s", String((max_rgb < 3) ? (max_rgb < 2) ? AverageR() : AverageG() : AverageB()))
+        if (Exist(pass1_avg_file))
+        {
+            RT_FileDelete(pass1_avg_file)
+        }
 
-        for (i = 1, frames_count_minus_1)
+        for (i = 0, frames_count_minus_1)
         {
             current_frame = i
 
@@ -126,9 +126,12 @@ Function HDR10_Content_Metadata(clip c, string "log_path", bool "MaxCLL", bool "
         current_frame = 0
 
         pass1_max_file = log_path + "pass1_max" + temp_files_suffix + ".txt"
-        RT_WriteFile(pass1_max_file, "%s", String(Max(RplaneMax(threshold=threshold_), GplaneMax(threshold=threshold_), BplaneMax(threshold=threshold_))))
+        if (Exist(pass1_max_file))
+        {
+            RT_FileDelete(pass1_max_file)
+        }
 
-        for (i = 1, frames_count_minus_1)
+        for (i = 0, frames_count_minus_1)
         {
             current_frame = i
             RT_WriteFile(pass1_max_file, "%s", String(Max(RplaneMax(threshold=threshold_), GplaneMax(threshold=threshold_), BplaneMax(threshold=threshold_))), append=true)
@@ -152,17 +155,16 @@ Function HDR10_Content_Metadata(clip c, string "log_path", bool "MaxCLL", bool "
         pass1_avg_file = log_path + "pass1_avg" + temp_files_suffix + ".txt"
         pass1_max_file = log_path + "pass1_max" + temp_files_suffix + ".txt"
 
-        rmax = RplaneMax()
-        gmax = GplaneMax()
-        bmax = BplaneMax()
-        max_rgb = (rmax >= Max(gmax, bmax)) ? 1
-            \ : (gmax >= Max(rmax, bmax)) ? 2
-            \ : 3
-        RT_WriteFile(pass1_avg_file, "%s", String((max_rgb < 3) ? (max_rgb < 2) ? AverageR() : AverageG() : AverageB()))
-        RT_WriteFile(pass1_max_file, "%s", String((maxcll_percentile_100) ? Max(rmax, gmax, bmax)
-            \ : Max(RplaneMax(threshold=threshold_), GplaneMax(threshold=threshold_), BplaneMax(threshold=threshold_))))
+        if (Exist(pass1_avg_file))
+        {
+            RT_FileDelete(pass1_avg_file)
+        }
+        if (Exist(pass1_max_file))
+        {
+            RT_FileDelete(pass1_max_file)
+        }
 
-        for (i = 1, frames_count_minus_1)
+        for (i = 0, frames_count_minus_1)
         {
             current_frame = i
 
