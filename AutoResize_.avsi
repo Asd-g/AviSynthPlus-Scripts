@@ -11,12 +11,13 @@ ResizeShader(for resizeshader resizer)
 FillBorders (for fill_margins=true)
 avs_libplacebo (for libplacebo_Resample)
 RT_Stats (for fmtc_resample and interlaced=true)
+RoundHalfToEven.avsi (>= 1.0.2)
 */
 
 
 ### Usage ###
 ###
-# AutoResize(clip c, val mode, int "left", int "top", int "right", int "bottom", string "resizer", string "dither_type", bool "fill_margins", bool "mod2", string "args", int "dmode", bool "interlaced")
+# AutoResize(clip c, val mode, int "left", int "top", int "right", int "bottom", string "resizer", string "dither_type", bool "fill_margins", int "mod_w", int "mod_h", string "args", int "dmode", bool "interlaced")
 ###
 ## Parameters ##
 #---------------
@@ -42,8 +43,8 @@ RT_Stats (for fmtc_resample and interlaced=true)
 #---------------
 # fill_margins (default left=top=right=bottom=0 if fill_margins=false): Whether to use FillMargins to fill 1 line on: left; top; right; bottom.
 #---------------
-# mod2 (default false): Whether to force mod2 calculation for the new size.
-# It has effect only for non-420 video.
+# mod_w/mod_h (default mod_w: if YUV420/YUV422 2, else 1): Width and height mod calculation for the new size.
+# Default mod_h: mod_w.
 #---------------
 # args (default ""): Specify additional resizer arguments.
 #---------------
@@ -86,7 +87,14 @@ AutoResize(720, resizer="z_BicubicResize", args="b=-0.25, c=0.125") # Assume 192
 */
 
 
+### Version: 1.2.0
+
+
 ### Changelog ###
+#---------------
+# 1.2.0
+# Parameter mod2 is replaced by mod_w, mod_h.
+# Changed the requirement of RoundHalfToEven (>= 1.0.2).
 #---------------
 # 1.1.1
 # Fixed missing variable when mode array is used and no addition crop/shift is required.
@@ -120,7 +128,7 @@ AutoResize(720, resizer="z_BicubicResize", args="b=-0.25, c=0.125") # Assume 192
 # Added dither_type parameter.
 
 
-function AutoResize(clip c, val mode, int "left", int "top", int "right", int "bottom", string "resizer", string "dither_type", bool "fill_margins", bool "mod2", string "args", int "dmode", bool "interlaced")
+Function AutoResize(clip c, val mode, int "left", int "top", int "right", int "bottom", string "resizer", string "dither_type", bool "fill_margins", int "mod_w", int "mod_h", string "args", int "dmode", bool "interlaced")
 {
     mode_array = IsArray(mode)
     Assert((mode_array && ArraySize(mode) == 2 && IsInt(mode[0]) && IsInt(mode[1])) || IsInt(mode) || (IsString(mode) && mode == "sd"), "AutoResize: mode has wrong value.")
@@ -132,12 +140,25 @@ function AutoResize(clip c, val mode, int "left", int "top", int "right", int "b
     dither_type = ((z_check) || (resizer == "fmtc_resample")) ? default(dither_type, "ordered") : "no"
     Assert((dither_type == "no") || (dither_type == "none") || (dither_type == "ordered") || (dither_type == "error_diffusion"), "AutoResize: wrong dither_type.")
 
-    mod2 = default(mod2, false)
+    clip_420 = Is420(c)
+    clip_422 = Is422(c)
+    mod_w = default(mod_w, (clip_420 || clip_422) ? 2 : 1)
+    mod_h = default(mod_h, mod_w)
     left = default(left, 0)
     top = default(top, 0)
     right = default(right, 0)
     bottom = default(bottom, 0)
 
+    if (clip_420)
+    {
+        Assert(mod_w >= 2 && mod_h >= 2, "AutoResize: mod_w/mod_h must be greater than or equal to 2.")
+    }
+    else if (clip_422)
+    {
+        Assert(mod_w >= 2, "AutoResize: mod_w must be greater than or equal to 2.")
+    }
+
+    Assert(mod_w >= 1 && mod_h >=1, "AutoResize: mod_w/mod_h must be greater than or equal to 1.")
     Assert(left >= 0, "AutoResize: left must be >= 0.")
     Assert(top >= 0, "AutoResize: top must be >= 0.")
     Assert(right <= 0, "AutoResize: right must be <= 0.")
@@ -202,7 +223,7 @@ function AutoResize(clip c, val mode, int "left", int "top", int "right", int "b
     interlaced = default(interlaced, false)
 
     newsize = (IsString(mode) && mode == "sd") ? _AutoResizeSD(c, top, bottom) :
-        \ (IsInt(mode)) ? _AutoResizeHD(c, mode, left, top, right, bottom, mod2) : (String(mode[0]) + ", " + String(mode[1]))
+        \ (IsInt(mode)) ? _AutoResizeHD(c, mode, left, top, right, bottom, mod_w, mod_h) : (String(mode[0]) + ", " + String(mode[1]))
 
     if (z_check)
     {
@@ -269,17 +290,15 @@ function AutoResize(clip c, val mode, int "left", int "top", int "right", int "b
 
 function _AutoResizeSD(clip c, int top, int bottom)
 {
-    return String(720) + "," + String(Int(RoundHalfToEven_mod2(720 * (Float(Height(c) - top + bottom) / Width(c)))))
+    return String(720) + "," + String(RoundHalfToEven(720 * (Float(Height(c) - top + bottom) / Width(c)), mod=2))
 }
 
-function _AutoResizeHD(clip c, int mode, int left, int top, int right, int bottom, bool mod2)
+function _AutoResizeHD(clip c, int mode, int left, int top, int right, int bottom, int mod_w, int mod_h)
 {
     size = Float(Width(c) - left + right) / (Height(c) - top + bottom)
     div = 16.0 / 9.0
 
-    w = size <= div ? RoundHalfToEven_mod2(mode * size) : RoundHalfToEven_mod2(mode * div)
+    w = size <= div ? RoundHalfToEven(mode * size, mod=mod_w) : RoundHalfToEven(mode * div, mod=mod_w)
 
-    return String(Int(w)) + "," + String(size <= div ? mode :
-        \ mod2 ? Int(RoundHalfToEven_mod2(w / size)) :
-            \ !Is420(c) ? RoundHalfToEven(w / size) : Int(RoundHalfToEven_mod2(w / size)))
+    return String(w) + "," + String(size <= div ? mode : RoundHalfToEven(w / size, mod_h))
 }
