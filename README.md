@@ -21,6 +21,7 @@
 - GMSD - port of the VapourSynth GMSD.
 - GradFun3DBmod - based on GradFun2DBmod but it uses GradFun3 and support 10..16-bit clips.
 - HDR10_Content_Metadata - calculating MaxFall and MaxCLL of HDR10 video.
+- HDR10_Content_Metadata_chunks - running HDR10_Content_Metadata in 4 chunks simultaneously.
 - IQA_downsample - downsampler for image quality assessment model.
 - lfdeband - f3kdb only on low frequencies.
 - LWLInfo - script displaying LSMASHSource/FFMS2/D2VSource frame properties.
