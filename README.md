@@ -18,6 +18,7 @@
 - FFMS2_ - additional parameters for better font styling.
 - FixBrightnessProtect3 - it changes the brightness of column/row.
 - Fixer - a wrapper of EdgeFixer.
+- getnative - finds the native resolution(s) of upscaled material (mostly anime).
 - GMSD - port of the VapourSynth GMSD.
 - GradFun3DBmod - based on GradFun2DBmod but it uses GradFun3 and support 10..16-bit clips.
 - HDR10_Content_Metadata - calculating MaxFall and MaxCLL of HDR10 video.
