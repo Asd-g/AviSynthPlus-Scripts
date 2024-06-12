@@ -5,6 +5,8 @@ start cmd /c avsr64 chunk2.avs
 start cmd /c avsr64 chunk3.avs
 start cmd /c avsr64 chunk4.avs
 
+TIMEOUT /T 1 /nobreak > nul
+
 SETLOCAL EnableExtensions
 set EXE=avsr64.exe
 :LOOPSTART
