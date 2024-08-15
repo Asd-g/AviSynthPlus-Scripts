@@ -11,9 +11,9 @@ by PL
 
 ### Usage ###
 ###
-# BalanceBorders(clip c, val "cTop", val "cBottom", val "cLeft", val "cRight", val "thresh", val "blur", bool "y", bool "u", bool "v", string "cloc")
+# BalanceBorders(clip c, val "cTop", val "cBottom", val "cLeft", val "cRight", val "thresh", val "blur", bool "y", bool "u", bool "v", string "cloc", int "float_range")
 ###
-# bbmod(clip c, val "cTop", val "cBottom", val "cLeft", val "cRight", val "thresh", val "blur", bool "y", bool "u", bool "v", string "cloc")
+# bbmod(clip c, val "cTop", val "cBottom", val "cLeft", val "cRight", val "thresh", val "blur", bool "y", bool "u", bool "v", string "cloc", int "float_range")
 ###
 ## Parameters ##
 #---------------
@@ -41,9 +41,14 @@ by PL
 # If array of two numbers is used: the first number - luma plane, the second number - u and v planes.
 #---------------
 # y, u, v (default true): Whether to filter the corresponding plane.
+# If the clip is RGB, y=u=v=true.
 #---------------
 # cloc (default "left"): Chroma location of the video.
 # Possible values: "left", "center", "top_left".
+#---------------
+# float_range (default 0): What's the assumed range for 32-bit input.
+# 0: [0.0, 1.0]
+# 1: [16.0/235.0, 235.0/255.0]
 
 
 #СОВЕТЫ:
@@ -101,7 +106,14 @@ BalanceBorders/bbmod([60,20,40], cleft=[40,20,10], thresh=[12,4,5], blur=[100,99
 ### Requirements - AviSynth+ >= 3.7.1, avsresize
 
 
+### Version: 1.0.0
+
+
 ### Changelog ###
+#---------------
+# 1.0.0
+# Added support for planar RGB clips.
+# Added parameter float_range.
 #---------------
 # Fixed processing when the input has one plane.
 #---------------
@@ -146,30 +158,32 @@ BalanceBorders/bbmod([60,20,40], cleft=[40,20,10], thresh=[12,4,5], blur=[100,99
 # Processing only part of the frame.
 
 
-Function BalanceBorders(clip c, val "cTop", val "cBottom", val "cLeft", val "cRight", val "thresh", val "blur", bool "y", bool "u", bool "v", string "cloc")
+Function BalanceBorders(clip c, val "cTop", val "cBottom", val "cLeft", val "cRight", val "thresh", val "blur", bool "y", bool "u", bool "v", string "cloc", int "float_range")
 {
-    bb_process(c, 0, cTop, cBottom, cLeft, cRight, thresh, blur, y, u, v, cloc)
+    bb_process(c, 0, cTop, cBottom, cLeft, cRight, thresh, blur, y, u, v, cloc, float_range)
 
     return propCopy(c)
 }
 
-Function bbmod(clip c, val "cTop", val "cBottom", val "cLeft", val "cRight", val "thresh", val "blur", bool "y", bool "u", bool "v", string "cloc")
+Function bbmod(clip c, val "cTop", val "cBottom", val "cLeft", val "cRight", val "thresh", val "blur", bool "y", bool "u", bool "v", string "cloc", int "float_range")
 {
-    bb_process(c, 1, cTop, cBottom, cLeft, cRight, thresh, blur, y, u, v, cloc)
+    bb_process(c, 1, cTop, cBottom, cLeft, cRight, thresh, blur, y, u, v, cloc, float_range)
 
     return propCopy(c)
 }
 
-Function bb_process(clip c, int func_name, val "cTop", val "cBottom", val "cLeft", val "cRight", val "thresh", val "blur", bool "y", bool "u", bool "v", string "cloc")
+Function bb_process(clip c, int func_name, val "cTop", val "cBottom", val "cLeft", val "cRight", val "thresh", val "blur", bool "y", bool "u", bool "v", string "cloc", int "float_range")
 {
-    Assert(isYUV(c), "This is not an YUV/Y clip.")
+    Assert(IsPlanar(c), "The clip must be in planar format.")
     Assert(!(propGetType(c, "_FieldBased") > 0 && propGetInt(c, "_FieldBased") > 0), "Only progressive video is supported.")
 
-    y = Default(y, true)
-    u = Default(u, true)
-    v = Default(v, true)
+    clip_rgb = IsRGB(c)
 
-    clip_444 = Is444(c)
+    y = clip_rgb ? true : Default(y, true)
+    u = clip_rgb ? true : Default(u, true)
+    v = clip_rgb ? true : Default(v, true)
+
+    clip_444 = Is444(c) || clip_rgb
     clip_420 = Is420(c)
     chrh = clip_420 ? [0, 1, 1] : [0, 0, 0]
     chrw = clip_444 ? [0, 0, 0] : [0, 1, 1]
@@ -232,10 +246,17 @@ Function bb_process(clip c, int func_name, val "cTop", val "cBottom", val "cLeft
 
     Assert(cloc == "left" || cloc == "top_left" || cloc == "center", "cloc must be one of the values 'left', 'top_left', 'center'.")
 
+    float_range = Default(float_range, 0)
+
+    Assert(float_range == 0 || float_range == 1, "float_range must be either 0 or 1.")
+
     source_planes = [y, u, v]
     num_planes = min(NumComponents(c), 3) - 1
-    plane_a = (num_planes == 0) ? [ExtractY(c)] : [ExtractY(c), ExtractU(c), ExtractV(c)]
-    plane_error = ["(Y plane).", "(U plane).", "(V plane)."]
+    plane_a = !clip_rgb ?
+        \ (num_planes == 0) ? [ExtractY(c)] :
+        \ [ExtractY(c), ExtractU(c), ExtractV(c)] :
+        \ [ExtractR(c), ExtractG(c), ExtractB(c)]
+    plane_error = clip_rgb ? ["(R plane).", "(G plane).", "(B plane)."] : ["(Y plane).", "(U plane).", "(V plane)."]
     ctop_crop = [BitLShift(ctop_a[0], 1), BitLShift(ctop_a[1], 1), BitLShift(ctop_a[2], 1)]
     cleft_crop = [BitLShift(cleft_a[0], 1), BitLShift(cleft_a[1], 1), BitLShift(cleft_a[2], 1)]
     cbottom_crop = [BitLShift(cbottom_a[0], 1), BitLShift(cbottom_a[1], 1), BitLShift(cbottom_a[2], 1)]
@@ -254,10 +275,10 @@ Function bb_process(clip c, int func_name, val "cTop", val "cBottom", val "cLeft
             Assert(cleft_a[i] * 4 < Width() && cright_a[i] * 4 < Width(), "cLeft / cRight must be lower than " + String(Width() / 4) + " " + plane_error[i])
             Assert(ctop_a[i] * 4 < Height() && cbottom_a[i] * 4 < Height(), "cTop / cBottom must be lower than " + String(Height() / 4) + " " + plane_error[i])
 
-            (ctop_a[i] > 0) ? (StackVertical(Crop(0, 0, 0, ctop_crop[i]).Eval(f_name + "(ctop_a[i], thresh_a[i], blur_a[i], i, clip_444, clip_420, cloc)"), Crop(0, ctop_crop[i], 0, 0)).TurnRight()) : TurnRight()
-            (cleft_a[i] > 0) ? (StackVertical(Crop(0, 0, 0, cleft_crop[i]).Eval(f_name + "(cleft_a[i], thresh_a[i], blur_a[i], i, clip_444, clip_420, cloc)"), Crop(0, cleft_crop[i], 0, 0)).TurnRight()) : TurnRight()
-            (cbottom_a[i] > 0) ? (StackVertical(Crop(0, 0, 0, cbottom_crop[i]).Eval(f_name + "(cbottom_a[i] , thresh_a[i], blur_a[i], i, clip_444, clip_420, cloc)"), Crop(0, cbottom_crop[i], 0, 0)).TurnRight()) : TurnRight()
-            (cright_a[i] > 0) ? StackVertical(Crop(0, 0, 0, cright_crop[i]).Eval(f_name + "(cright_a[i], thresh_a[i], blur_a[i], i, clip_444, clip_420, cloc)"), Crop(0, cright_crop[i], 0, 0)).TurnRight() : TurnRight()
+            (ctop_a[i] > 0) ? (StackVertical(Crop(0, 0, 0, ctop_crop[i]).Eval(f_name + "(ctop_a[i], thresh_a[i], blur_a[i], i, clip_rgb, clip_444, clip_420, cloc, float_range)"), Crop(0, ctop_crop[i], 0, 0)).TurnRight()) : TurnRight()
+            (cleft_a[i] > 0) ? (StackVertical(Crop(0, 0, 0, cleft_crop[i]).Eval(f_name + "(cleft_a[i], thresh_a[i], blur_a[i], i, clip_rgb, clip_444, clip_420, cloc, float_range)"), Crop(0, cleft_crop[i], 0, 0)).TurnRight()) : TurnRight()
+            (cbottom_a[i] > 0) ? (StackVertical(Crop(0, 0, 0, cbottom_crop[i]).Eval(f_name + "(cbottom_a[i] , thresh_a[i], blur_a[i], i, clip_rgb, clip_444, clip_420, cloc, float_range)"), Crop(0, cbottom_crop[i], 0, 0)).TurnRight()) : TurnRight()
+            (cright_a[i] > 0) ? StackVertical(Crop(0, 0, 0, cright_crop[i]).Eval(f_name + "(cright_a[i], thresh_a[i], blur_a[i], i, clip_rgb, clip_444, clip_420, cloc, float_range)"), Crop(0, cright_crop[i], 0, 0)).TurnRight() : TurnRight()
 
             if (NumComponents(c) == 1)
             {
@@ -274,10 +295,10 @@ Function bb_process(clip c, int func_name, val "cTop", val "cBottom", val "cLeft
         }
     }
 
-    return CombinePlanes(yuv_planes[0], yuv_planes[1], yuv_planes[2], planes="YUV", sample_clip=c)
+    return CombinePlanes(yuv_planes[0], yuv_planes[1], yuv_planes[2], planes=clip_rgb ? "RGB" : "YUV", sample_clip=c)
 }
 
-Function BalanceTopBorder(clip c, int cTop, float thresh, int blur, int plane, bool clip_444, bool clip_420, string cloc)
+Function BalanceTopBorder(clip c, int cTop, float thresh, int blur, int plane, bool clip_rgb, bool clip_444, bool clip_420, string cloc, int float_range)
 {
     cWidth = c.width
     cHeight = c.height
@@ -302,24 +323,37 @@ Function BalanceTopBorder(clip c, int cTop, float thresh, int blur, int plane, b
     z_BilinearResize(cWidth * 2, cTop * 2)
     originalBlur = last
 
-    if (plane == 0)
+    if (clip_rgb)
     {
-        Expr(original, originalBlur, referenceBlur, "z y - "+ String(thresh) +" scaleb > x "+ String(thresh) +" scaleb + z y - "+ String(-thresh) +" scaleb < x "+ String(thresh) +" scaleb - z y - x + ? ? 16 scaleb 235 scaleb clip")
+        Expr(original, originalBlur, referenceBlur, ""+ String(thresh) +" scaleb B^ z y - A@ B > x B + A "+ String(-thresh) +" scaleb < x B - A x + ? ?", clamp_float=true)
+
+        StackVertical(last, c2.Crop(0, cTop * 2, cWidth * 2, (cHeight - cTop) * 2))
+        z_PointResize(cWidth, cHeight)
+    }
+    else if (plane == 0)
+    {
+        scale = (ComponentSize(c) == 4 && float_range == 0) ? "0 1 clip" : "16 scaleb 235 scaleb clip"
+        Expr(original, originalBlur, referenceBlur, ""+ String(thresh) +" scaleb B^ z y - A@ B > x B + A "+ String(-thresh) +" scaleb < x B - A x + ? ? "+ scale +"")
 
         StackVertical(last, c2.Crop(0, cTop * 2, cWidth * 2, (cHeight - cTop) * 2))
         z_PointResize(cWidth, cHeight)
     }
     else
     {
-        if (BitsPerComponent(c) == 32) { Expr(original, originalBlur, referenceBlur, "z y - "+ String(thresh) +" 128 - scaleb 0.5 + > x "+ String(thresh) +" 128 - scaleb 0.5 + + z y - "+ String(-thresh) +" 128 - scaleb 0.5 + < x "+ String(thresh) +" 128 - scaleb 0.5 + - z y - x + ? ? -0.43921568627 0.43921568627 clip") }
-        else { Expr(original, originalBlur, referenceBlur, "z y - "+ String(thresh) +" scaleb > x "+ String(thresh) +" scaleb + z y - "+ String(-thresh) +" scaleb < x "+ String(thresh) +" scaleb - z y - x + ? ? 16 scaleb 240 scaleb clip") }
+
+        if (ComponentSize(c) == 4)
+        {
+            scale = (float_range == 0) ? "-0.5 0.5 clip" : "-0.43921568627 0.43921568627 clip"
+            Expr(original, originalBlur, referenceBlur, ""+ String(thresh) +" 128 - scaleb 0.5 + B^ z y - A@ B > x B + A "+ String(-thresh) +" 128 - scaleb 0.5 + < x B - A x + ? ? "+ scale +"")
+        }
+        else { Expr(original, originalBlur, referenceBlur, ""+ String(thresh) +" scaleb B^ z y - A@ B > x B + A "+ String(-thresh) +" scaleb < x B - A x + ? ? 16 scaleb 240 scaleb clip") }
 
         StackVertical(last, c2.Crop(0, cTop * 2, cWidth * 2, (cHeight - cTop) * 2))
         chroma_shift_(clip_444, clip_420, cloc)
     }
 }
 
-Function btb(clip c, int cTop, float thresh, int blur, int plane, bool clip_444, bool clip_420, string cloc)
+Function btb(clip c, int cTop, float thresh, int blur, int plane, bool clip_rgb, bool clip_444, bool clip_420, string cloc, int float_range)
 {
     cWidth = c.width
     cHeight = c.height
@@ -339,17 +373,35 @@ Function btb(clip c, int cTop, float thresh, int blur, int plane, bool clip_444,
     z_bicubicresize(blurWidth * 2, cTop * 2, b=1, c=0)
     originalBlur = z_bicubicresize(blurWidth * 2, cTop * 2, b=1, c=0).z_bicubicresize(cWidth * 2, cTop * 2, b=1, c=0)
 
-    if (plane == 0)
+    if (clip_rgb)
     {
-        Expr(original, originalBlur, referenceBlur, "z 16 scaleb - y 16 scaleb - / 8 min 0.4 max x 16 scaleb - * 16 scaleb + x - "+ String(thresh) +" scaleb > x "+ String(thresh) +" scaleb + z 16 scaleb - y 16 scaleb - / 8 min 0.4 max x 16 scaleb - * 16 scaleb + x - "+ String(-thresh) +" scaleb < x "+ String(thresh) +" scaleb - z 16 scaleb - y 16 scaleb - / 8 min 0.4 max x 16 scaleb - * 16 scaleb + ? ? 16 scaleb 235 scaleb clip")
+        Expr(original, originalBlur, referenceBlur, ""+ String(thresh) +" scaleb B^ z y / 8 min 0.4 max x * A@ x - B > x B + A x - "+ String(-thresh) +" scaleb < x B - A ? ?", clamp_float=true)
+
+        StackVertical(last, c2.Crop(0, cTop * 2, cWidth * 2, (cHeight - cTop) * 2))
+        z_PointResize(cWidth, cHeight)
+    }
+    else if (plane == 0)
+    {
+        if (ComponentSize(c) == 4 && float_range == 0)
+        {
+            Expr(original, originalBlur, referenceBlur, ""+ String(thresh) +" scaleb B^ z y / 8 min 0.4 max x * A@ x - B > x B + A x - "+ String(-thresh) +" scaleb < x B - A ? ?", clamp_float=true)
+        }
+        else
+        {
+            Expr(original, originalBlur, referenceBlur, ""+ String(thresh) +" scaleb B^ z 16 scaleb - y 16 scaleb - / 8 min 0.4 max x 16 scaleb - * 16 scaleb + A@ x - B > x B + A x - "+ String(-thresh) +" scaleb < x B - A ? ? 16 scaleb 235 scaleb clip")
+        }
 
         StackVertical(last, c2.Crop(0, cTop * 2, cWidth * 2, (cHeight - cTop) * 2))
         z_PointResize(cWidth, cHeight)
     }
     else
     {
-        if (BitsPerComponent(c) == 32) { Expr(original, originalBlur, referenceBlur, "z y - z 0.5 + y 0.5 + / 8 min 0.4 max x * + x - "+ String(thresh) +" 128 - scaleb 0.5 + > x "+ String(thresh) +" 128 - scaleb 0.5 + + z y - z 0.5 + y 0.5 + / 8 min 0.4 max x * + x - "+ String(-thresh) +" 128 - scaleb 0.5 + < x "+ String(thresh) +" 128 - scaleb 0.5 + - z y - z 0.5 + y 0.5 + / 8 min 0.4 max x * + ? ? -0.43921568627 0.43921568627 clip") }
-        else { Expr(original, originalBlur, referenceBlur, "z y - z y / 8 min 0.4 max x 128 scaleb - * 128 scaleb + + x - "+ String(thresh) +" scaleb > x "+ String(thresh) +" scaleb + z y - z y / 8 min 0.4 max x 128 scaleb - * 128 scaleb + + x - "+ String(-thresh) +" scaleb < x "+ String(thresh) +" scaleb - z y - z y / 8 min 0.4 max x 128 scaleb - * 128 scaleb + + ? ? 16 scaleb 240 scaleb clip") }
+        if (ComponentSize(c) == 4)
+        {
+            scale = (float_range == 0) ? "-0.5 0.5 clip" : "-0.43921568627 0.43921568627 clip"
+            Expr(original, originalBlur, referenceBlur, ""+ String(thresh) +" 128 - scaleb 0.5 + B^ z y - z 0.5 + y 0.5 + / 8 min 0.4 max x * + A@ x - B > x B + A x - "+ String(-thresh) +" 128 - scaleb 0.5 + < x B - A ? ? "+ scale +"")
+        }
+        else { Expr(original, originalBlur, referenceBlur, ""+ String(thresh) +" scaleb B^ z y - z y / 8 min 0.4 max x 128 scaleb - * 128 scaleb + + A@ x - B > x B + A x - "+ String(-thresh) +" scaleb < x B - A ? ? 16 scaleb 240 scaleb clip") }
 
         StackVertical(last, c2.Crop(0, cTop * 2, cWidth * 2, (cHeight - cTop) * 2))
         chroma_shift_(clip_444, clip_420, cloc)
