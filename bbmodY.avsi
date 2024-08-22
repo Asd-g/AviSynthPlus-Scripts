@@ -57,7 +57,14 @@ It works only on the luma plane.
 # It can be single number or array.
 
 
+### Version 1.0.0
+
+
 ### Changelog ###
+#---------------
+# 1.0.0
+# Fixed the error message for column/row.
+# Fixed cTop/cLeft processing.
 #---------------
 # Fixed column/row = 0.
 #---------------
@@ -76,8 +83,8 @@ Function bbmodY(clip c, val "column", val "w", val "row", val "h", val "cTop", v
 {
     if (Defined(column))
     {
-        Assert(column >= 0, "bbmodY: column must be either greater than or equal to 0.")
         cl = (IsArray(column)) ? 1 : Default(column, 0)
+        Assert(cl >= 0, "bbmodY: column must be either greater than or equal to 0.")
     }
     else
     {
@@ -85,8 +92,8 @@ Function bbmodY(clip c, val "column", val "w", val "row", val "h", val "cTop", v
     }
     if (Defined(row))
     {
-        Assert(row >= 0, "bbmodY: row must be either greater than or equal to 0.")
         rw = (IsArray(row)) ? 1 : Default(row, 0)
+        Assert(rw >= 0, "bbmodY: row must be either greater than or equal to 0.")
     }
     else
     {
@@ -136,8 +143,8 @@ Function bbmodY(clip c, val "column", val "w", val "row", val "h", val "cTop", v
                 }
                 else
                 {
-                    if (w_ == 0) { StackHorizontal(Crop(0, 0, col_, 0), bbmod(Crop(col_, 0, 0, 0), cTop, cBottom, cLeft_, 0, thresh_, blur_)) }
-                    else { StackHorizontal(Crop(0, 0, col_, 0), Crop(bbmod(Crop(col_, 0, 0, 0), cTop, cBottom, cLeft_, 0, thresh_, blur_), 0, 0, w_, 0), Crop(col_ + w_, 0, 0, 0)) }
+                    if (w_ == 0) { StackHorizontal(Crop(0, 0, column[i], 0), bbmod(Crop(column[i], 0, 0, 0), cTop, cBottom, cLeft_, 0, thresh_, blur_)) }
+                    else { StackHorizontal(Crop(0, 0, column[i], 0), Crop(bbmod(Crop(column[i], 0, 0, 0), cTop, cBottom, cLeft_, 0, thresh_, blur_), 0, 0, w_, 0), Crop(column[i] + w_, 0, 0, 0)) }
                 }
             }
             else
@@ -206,8 +213,8 @@ Function bbmodY(clip c, val "column", val "w", val "row", val "h", val "cTop", v
                 }
                 else
                 {
-                    if (h_ == 0) { StackVertical(Crop(0, 0, 0, row_), bbmod(Crop(0, row_, 0, 0), cTop_, 0, cLeft, cRight, thresh_, blur_)) }
-                    else { StackVertical(Crop(0, 0, 0, row_), Crop(bbmod(Crop(0, row_, 0, 0), cTop_, 0, cLeft, cRight, thresh_, blur_), 0, 0, 0, h_), Crop(0, row_ + h_, 0, 0)) }
+                    if (h_ == 0) { StackVertical(Crop(0, 0, 0, row[i]), bbmod(Crop(0, row[i], 0, 0), cTop_, 0, cLeft, cRight, thresh_, blur_)) }
+                    else { StackVertical(Crop(0, 0, 0, row[i]), Crop(bbmod(Crop(0, row[i], 0, 0), cTop_, 0, cLeft, cRight, thresh_, blur_), 0, 0, 0, h_), Crop(0, row[i] + h_, 0, 0)) }
                 }
             }
             else
