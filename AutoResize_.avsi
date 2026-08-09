@@ -17,7 +17,7 @@ RoundHalfToEven.avsi (>= 1.0.2)
 
 ### Usage ###
 ###
-# AutoResize(clip c, val mode, int "left", int "top", int "right", int "bottom", string "resizer", string "dither_type", bool "fill_margins", int "mod_w", int "mod_h", string "args", int "dmode", bool "interlaced")
+# AutoResize(clip c, val mode, int "left", int "top", int "right", int "bottom", string "resizer", string "dither_type", bool "fill_margins", int "mod_w", int "mod_h", string "args", int "dmode", bool "interlaced", bool "use_sar")
 ###
 ## Parameters ##
 #---------------
@@ -51,6 +51,9 @@ RoundHalfToEven.avsi (>= 1.0.2)
 # dmode (default 0): What dither type to be used for fmtc_resample other than 0/1/6.
 #---------------
 # interlaced (default false): Whether the video is interlaced (valid only for z_ and fmtc_resample resizers).
+#---------------
+# use_sar (default false): Whether to read _SARNum/_SARDen properties to calculate Display Aspect Ratio.
+# If true and properties are missing/invalid, it throws an error instead of failing silently.
 
 
 ### Examples ###
@@ -85,12 +88,27 @@ AutoResize(720, dither_type="no") # Assume 1920x800_input. It's the same as z_Sp
 /*
 AutoResize(720, resizer="z_BicubicResize", args="b=-0.25, c=0.125") # Assume 1920x800_input. It's the same as z_BicubicResize(1280, 534, -0.25, 0.125)
 */
+###
+/*
+AutoResize(720, use_sar=true) # Assume 720x480_input (4:3 DVD, SAR 8:9). It calculates a 4:3 DAR and is the same as z_Spline36Resize(960, 720, dither="ordered")
+*/
+###
+/*
+AutoResize(720, use_sar=true) # Assume 720x480_input (16:9 DVD, SAR 32:27). It calculates a 16:9 DAR and is the same as z_Spline36Resize(1280, 720, dither="ordered")
+*/
+###
+/*
+AutoResize("sd", use_sar=true) # Assume 720x480_input (4:3 DVD, SAR 8:9). It forces 720px width and calculates height based on 4:3 DAR. Same as z_Spline36Resize(720, 540, dither="ordered")
+*/
 
 
-### Version: 1.2.0
+### Version: 1.3.0
 
 
 ### Changelog ###
+#---------------
+# 1.3.0
+# Added parameter use_sar.
 #---------------
 # 1.2.0
 # Parameter mod2 is replaced by mod_w, mod_h.
@@ -128,7 +146,7 @@ AutoResize(720, resizer="z_BicubicResize", args="b=-0.25, c=0.125") # Assume 192
 # Added dither_type parameter.
 
 
-Function AutoResize(clip c, val mode, int "left", int "top", int "right", int "bottom", string "resizer", string "dither_type", bool "fill_margins", int "mod_w", int "mod_h", string "args", int "dmode", bool "interlaced")
+Function AutoResize(clip c, val mode, int "left", int "top", int "right", int "bottom", string "resizer", string "dither_type", bool "fill_margins", int "mod_w", int "mod_h", string "args", int "dmode", bool "interlaced", bool "use_sar")
 {
     mode_array = IsArray(mode)
     Assert((mode_array && ArraySize(mode) == 2 && IsInt(mode[0]) && IsInt(mode[1])) || IsInt(mode) || (IsString(mode) && mode == "sd"), "AutoResize: mode has wrong value.")
@@ -164,6 +182,21 @@ Function AutoResize(clip c, val mode, int "left", int "top", int "right", int "b
     Assert(right <= 0, "AutoResize: right must be <= 0.")
     Assert(bottom <= 0, "AutoResize: bottom must be <= 0.")
 
+    use_sar = default(use_sar, false)
+    sar = 1.0
+
+    if (use_sar)
+    {
+        Assert(propNumElements(c, "_SARNum") > 0 && propNumElements(c, "_SARDen") > 0, "AutoResize: use_sar=true but _SARNum/_SARDen frame properties are missing.")
+
+        sar_num = propGetInt(c, "_SARNum")
+        sar_den = propGetInt(c, "_SARDen")
+
+        Assert(sar_num > 0 && sar_den > 0, "AutoResize: use_sar=true but _SARNum/_SARDen are invalid (must be > 0).")
+
+        sar = Float(sar_num) / Float(sar_den)
+    }
+
     crop_values = ((left > 0 || top > 0 || right > 0 || bottom > 0) && !mode_array) ? true : false
     if (crop_values)
     {
@@ -189,32 +222,36 @@ Function AutoResize(clip c, val mode, int "left", int "top", int "right", int "b
     }
     else if (mode_array)
     {
-        src_w = Float(Width(c))
-        dst_w = Float(mode[0])
-        src_dar = src_w / Height(c)
-        dst_dar = dst_w / mode[1]
+        src_w_phys = Float(Width(c))
+        src_h_phys = Float(Height(c))
 
-        if (src_dar != dst_dar)
+        src_w_disp = src_w_phys * sar
+        src_h_disp = src_h_phys
+
+        src_dar = src_w_disp / src_h_disp
+        dst_dar = Float(mode[0]) / Float(mode[1])
+
+        if (Abs(src_dar - dst_dar) > 0.001)
         {
             if (src_dar > dst_dar)
             {
-                scale = Float(Height(c)) / mode[1]
-                crop_ = src_w - (dst_w * scale)
+                dst_w_phys = (dst_dar * src_h_disp) / sar
+                crop_ = src_w_phys - dst_w_phys
 
                 proc_left = crop_ / 2
                 proc_top = 0
-                proc_right = (src_w - (src_w - crop_)) / 2
+                proc_right = crop_ / 2
                 proc_bottom = 0
             }
             else
             {
-                scale = src_w / dst_w
-                crop_ = Float(Height(c)) - (mode[1] * scale)
+                dst_h_phys = (src_w_disp / dst_dar)
+                crop_ = src_h_phys - dst_h_phys
 
                 proc_left = 0
                 proc_top = crop_ / 2
                 proc_right = 0
-                proc_bottom = (Height(c) - (Height(c) - crop_)) / 2
+                proc_bottom = crop_ / 2
             }
         }
     }
@@ -222,8 +259,8 @@ Function AutoResize(clip c, val mode, int "left", int "top", int "right", int "b
     args = defined(args) ? ", " + args : ""
     interlaced = default(interlaced, false)
 
-    newsize = (IsString(mode) && mode == "sd") ? _AutoResizeSD(c, top, bottom) :
-        \ (IsInt(mode)) ? _AutoResizeHD(c, mode, left, top, right, bottom, mod_w, mod_h) : (String(mode[0]) + ", " + String(mode[1]))
+    newsize = (IsString(mode) && mode == "sd") ? _AutoResizeSD(c, top, bottom, sar) :
+        \ (IsInt(mode)) ? _AutoResizeHD(c, mode, left, top, right, bottom, mod_w, mod_h, sar) : (String(mode[0]) + ", " + String(mode[1]))
 
     if (z_check)
     {
@@ -288,14 +325,18 @@ Function AutoResize(clip c, val mode, int "left", int "top", int "right", int "b
     }
 }
 
-function _AutoResizeSD(clip c, int top, int bottom)
+function _AutoResizeSD(clip c, int top, int bottom, float sar)
 {
-    return String(720) + "," + String(RoundHalfToEven(720 * (Float(Height(c) - top + bottom) / Width(c)), mod=2))
+    eff_height = Float(Height(c) - top + bottom)
+    eff_width = Float(Width(c)) * sar
+    return String(720) + "," + String(RoundHalfToEven(720.0 * eff_height / eff_width, mod=2))
 }
 
-function _AutoResizeHD(clip c, int mode, int left, int top, int right, int bottom, int mod_w, int mod_h)
+function _AutoResizeHD(clip c, int mode, int left, int top, int right, int bottom, int mod_w, int mod_h, float sar)
 {
-    size = Float(Width(c) - left + right) / (Height(c) - top + bottom)
+    eff_width = Float(Width(c) - left + right) * sar
+    eff_height = Float(Height(c) - top + bottom)
+    size = eff_width / eff_height
     div = 16.0 / 9.0
 
     w = size <= div ? RoundHalfToEven(mode * size, mod=mod_w) : RoundHalfToEven(mode * div, mod=mod_w)
